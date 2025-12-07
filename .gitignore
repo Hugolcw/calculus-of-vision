@@ -1,0 +1,14 @@
+# Manim output folders
+/media/
+/images/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (if any)
+.env
+
+# MacOS system files
+.DS_Store
