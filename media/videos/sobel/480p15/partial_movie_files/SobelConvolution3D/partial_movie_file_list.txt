@@ -1,3 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/home/hugo/Projects/math_project/media/videos/sobel/480p15/partial_movie_files/SobelConvolution3D/1742422418_2892971307_474233877.mp4'
-file 'file:/home/hugo/Projects/math_project/media/videos/sobel/480p15/partial_movie_files/SobelConvolution3D/1368581413_3515533520_2634897879.mp4'
