@@ -62,6 +62,8 @@ class SobelUniverse(ThreeDScene):
         self.transition_1_2()
         self.setup_scene_2_taylor()
         self.transition_2_3()
+        self.setup_scene_3_5_noise()  # 新增：噪声的战争
+        self.transition_3_5_to_3()
         self.setup_scene_3_matrices()
         self.transition_3_4()
         self.setup_scene_4_vision()
@@ -327,6 +329,180 @@ class SobelUniverse(ThreeDScene):
         self.wait(0.5)
 
     # ========================================================================
+    # Scene 3.5: 噪声的战争 (The War on Noise) - 新增
+    # ========================================================================
+    
+    def setup_scene_3_5_noise(self):
+        """Scene 3.5: 噪声的战争 - 为什么需要平滑"""
+        
+        # Act 1: 现实的残酷 - 展示带噪声的信号
+        axes = Axes(
+            x_range=[0, 10, 1],
+            y_range=[-2, 4, 1],
+            x_length=10,
+            y_length=4,
+            axis_config={"stroke_opacity": 0.5, "stroke_width": 1},
+            tips=False
+        )
+        
+        # 理想信号
+        def clean_signal(x):
+            return 1 + np.sin(x * 0.8)
+        
+        clean_graph = axes.plot(
+            clean_signal,
+            x_range=[0, 10],
+            color=COLOR_CONTINUOUS,
+            stroke_width=3
+        )
+        clean_label = Text("理想信号", font_size=24, color=COLOR_CONTINUOUS).to_corner(UL, buff=0.5)
+        
+        # 生成带噪声的信号（固定随机种子以保证可重复）
+        np.random.seed(42)
+        x_noisy = np.linspace(0, 10, 50)
+        # 先生成所有噪声值
+        noise_values = 0.4 * np.random.normal(0, 1, len(x_noisy))
+        y_noisy = [clean_signal(x) + noise for x, noise in zip(x_noisy, noise_values)]
+        noisy_points = VGroup()
+        for x, y in zip(x_noisy, y_noisy):
+            point = Dot(axes.c2p(x, y), color=COLOR_DIFF, radius=0.04)
+            noisy_points.add(point)
+        
+        noisy_label = Text("真实信号（含噪声）", font_size=24, color=COLOR_DIFF).next_to(clean_label, DOWN, aligned_edge=LEFT)
+        
+        self.play(
+            Create(axes),
+            Create(clean_graph),
+            Write(clean_label),
+            run_time=1
+        )
+        self.wait(0.5)
+        
+        self.play(
+            Create(noisy_points),
+            Write(noisy_label),
+            run_time=1.5
+        )
+        self.wait(1)
+        
+        # Act 2: 直接求导的灾难
+        # 对噪声信号求差分
+        diff_points = VGroup()
+        for i in range(len(x_noisy) - 1):
+            x_mid = (x_noisy[i] + x_noisy[i+1]) / 2
+            dy = (y_noisy[i+1] - y_noisy[i]) / (x_noisy[i+1] - x_noisy[i])
+            # 放大导数以便可视化
+            dy_scaled = dy * 2
+            start_point = axes.c2p(x_mid, 0)
+            end_point = axes.c2p(x_mid, dy_scaled)
+            diff_line = Line(start_point, end_point, color=RED, stroke_width=2)
+            diff_points.add(diff_line)
+        
+        disaster_text = Text("直接求导：噪声被放大！", font_size=32, color=RED).move_to(ORIGIN + DOWN * 2.5)
+        
+        self.play(
+            FadeOut(clean_graph, clean_label),
+            axes.animate.shift(UP * 1.5),
+            noisy_points.animate.shift(UP * 1.5),
+            noisy_label.animate.shift(UP * 1.5),
+            run_time=1
+        )
+        
+        # 创建新的坐标轴用于显示导数
+        axes_diff = Axes(
+            x_range=[0, 10, 1],
+            y_range=[-3, 3, 1],
+            x_length=10,
+            y_length=3,
+            axis_config={"stroke_opacity": 0.5, "stroke_width": 1},
+            tips=False
+        ).shift(DOWN * 1.5)
+        
+        self.play(
+            Create(axes_diff),
+            Create(diff_points),
+            Write(disaster_text),
+            run_time=2
+        )
+        self.wait(1.5)
+        
+        # Act 3: 高斯护盾
+        # 展示高斯滤波的效果
+        self.play(
+            FadeOut(diff_points, disaster_text, axes_diff),
+            axes.animate.shift(DOWN * 1.5),
+            noisy_points.animate.shift(DOWN * 1.5),
+            noisy_label.animate.shift(DOWN * 1.5),
+            run_time=1
+        )
+        
+        # 高斯平滑后的信号（预计算）
+        def gaussian_smooth(x):
+            # 简单的移动平均模拟高斯平滑
+            window = 0.5
+            total = 0
+            count = 0
+            for i, xi in enumerate(x_noisy):
+                if abs(xi - x) < window:
+                    weight = np.exp(-((xi - x) / (window/2)) ** 2)
+                    total += y_noisy[i] * weight
+                    count += weight
+            return total / count if count > 0 else clean_signal(x)
+        
+        smoothed_graph = axes.plot(
+            gaussian_smooth,
+            x_range=[0, 10],
+            color=COLOR_SMOOTH,
+            stroke_width=3
+        )
+        
+        gaussian_label = Text("高斯平滑后", font_size=24, color=COLOR_SMOOTH).next_to(noisy_label, DOWN, aligned_edge=LEFT)
+        
+        # 高斯函数可视化
+        gaussian_axes = Axes(
+            x_range=[-3, 3, 1],
+            y_range=[0, 1.2, 0.2],
+            x_length=3,
+            y_length=2,
+            axis_config={"stroke_opacity": 0.5},
+            tips=False
+        ).to_corner(UR, buff=0.5)
+        
+        gaussian_func = gaussian_axes.plot(
+            lambda x: np.exp(-x**2 / 2),
+            x_range=[-3, 3],
+            color=COLOR_SMOOTH,
+            stroke_width=3
+        )
+        gaussian_title = Text("高斯函数", font_size=20, color=COLOR_SMOOTH).next_to(gaussian_axes, UP, buff=0.2)
+        
+        self.play(
+            Create(smoothed_graph),
+            Write(gaussian_label),
+            Create(gaussian_axes),
+            Create(gaussian_func),
+            Write(gaussian_title),
+            run_time=2
+        )
+        self.wait(1.5)
+        
+        shield_text = Text("在求导的利刃出鞘之前，\n我们需要高斯的盾牌来过滤杂音", 
+                          font_size=28, color=WHITE).move_to(ORIGIN + DOWN * 2)
+        self.play(Write(shield_text), run_time=2)
+        self.wait(1.5)
+        
+        # 清理
+        self.play(
+            FadeOut(VGroup(axes, clean_graph, noisy_points, noisy_label, smoothed_graph, 
+                          gaussian_label, gaussian_axes, gaussian_func, gaussian_title, shield_text)),
+            run_time=1
+        )
+    
+    def transition_3_5_to_3(self):
+        """Scene 3.5到Scene 3的过渡"""
+        self.wait(0.5)
+
+    # ========================================================================
     # Scene 3: 算子解构 (Operator Anatomy)
     # ========================================================================
     
@@ -424,8 +600,61 @@ class SobelUniverse(ThreeDScene):
         )
         self.wait(1)
         
+        # Act 4: 卷积可分离性 - 计算效率说明（新增）
+        efficiency_title = Text("卷积的可分离性", font_size=32, color=WHITE).move_to(ORIGIN + UP * 2.5)
+        
+        # 展示计算效率对比
+        method1 = VGroup(
+            MathTex("3", color=GREEN, font_size=36),
+            MathTex("+", color=WHITE, font_size=36),
+            MathTex("3", color=GREEN, font_size=36),
+            MathTex("=", color=WHITE, font_size=36),
+            MathTex("6", color=GREEN, font_size=48)
+        ).arrange(RIGHT, buff=0.3)
+        method1_label = Text("分离卷积", font_size=24, color=GREEN).next_to(method1, DOWN, buff=0.3)
+        method1_group = VGroup(method1, method1_label)
+        
+        method2 = VGroup(
+            MathTex("3", color=RED, font_size=36),
+            MathTex("\\times", color=WHITE, font_size=36),
+            MathTex("3", color=RED, font_size=36),
+            MathTex("=", color=WHITE, font_size=36),
+            MathTex("9", color=RED, font_size=48)
+        ).arrange(RIGHT, buff=0.3)
+        method2_label = Text("直接矩阵", font_size=24, color=RED).next_to(method2, DOWN, buff=0.3)
+        method2_group = VGroup(method2, method2_label)
+        
+        efficiency_comparison = VGroup(method1_group, method2_group).arrange(RIGHT, buff=2)
+        efficiency_comparison.move_to(ORIGIN)
+        
+        vs_text = Text("vs", font_size=28, color=WHITE)
+        vs_text.move_to(efficiency_comparison.get_center())  # 放在两个算式中间
+        
+        self.play(
+            Write(efficiency_title),
+            run_time=0.5
+        )
+        self.wait(0.5)
+        
+        self.play(
+            FadeIn(method1_group, shift=LEFT),
+            FadeIn(method2_group, shift=RIGHT),
+            Write(vs_text),
+            run_time=1.5
+        )
+        self.wait(1)
+        
+        explanation_text = Text("横向的试探，纵向的抚慰，\n交织成了Sobel的视觉逻辑", 
+                              font_size=24, color=TEAL).move_to(ORIGIN + DOWN * 2)
+        self.play(Write(explanation_text), run_time=2)
+        self.wait(1.5)
+        
         # 清理
-        self.play(FadeOut(VGroup(kernel_sobel, result_text, center_rect, edge_highlight)), run_time=1)
+        self.play(
+            FadeOut(VGroup(kernel_sobel, result_text, center_rect, edge_highlight,
+                          efficiency_title, method1_group, method2_group, vs_text, explanation_text)),
+            run_time=1
+        )
 
     def transition_3_4(self):
         """场景3到场景4的过渡"""
@@ -436,227 +665,372 @@ class SobelUniverse(ThreeDScene):
     # ========================================================================
     
     def setup_scene_4_vision(self):
-        """Scene 4: 2D图像转3D地形"""
+        """Scene 4: 维度跃迁 + 全息扫描 + 实时示波器 (专家优化版)"""
         
-        # 数据准备: 生成测试图像数据
-        # 创建一个简单的测试图像: 左暗右亮的边缘
-        test_width, test_height = 100, 100
-        image_data = np.zeros((test_height, test_width, 3), dtype=np.uint8)
-        center_x = test_width // 2
-        for y in range(test_height):
-            for x in range(test_width):
-                # 使用sigmoid创建平滑过渡
-                intensity = int(255 / (1 + np.exp(-0.1 * (x - center_x))))
-                image_data[y, x] = [intensity, intensity, intensity]
+        # --- 1. 数据与坐标系准备 ---
+        # 使用更大的网格以保证视觉密度，但又不会卡死
+        rows, cols = 20, 20
         
-        # 降采样 (关键!)
-        downsampled = image_data[::10, ::10]  # 100x100 -> 10x10
-        height_map = downsampled[:, :, 0] / 255.0  # 归一化到[0,1]
+        # 统一的高度计算函数（避免坐标系不一致）
+        def get_height_data(x, y):
+            # 归一化坐标
+            u, v = x / cols, y / rows
+            # 两个 Sigmoid 叠加形成"台阶" (边缘)
+            val = 1 / (1 + np.exp(-15 * (u - 0.3))) + 1 / (1 + np.exp(-15 * (u - 0.7)))
+            # 让中间凹陷一点，增加地形复杂度
+            return val * 0.5
         
-        # Act 1: 2D锚定 - 显示图像和扫描线
-        # 使用Rectangle模拟图像 (因为ImageMobject可能不支持直接传入numpy数组)
-        # 或者创建一个像素网格来模拟图像
-        image_rect = Rectangle(
-            width=6, height=6,
-            fill_color=WHITE,
-            fill_opacity=0.8,
-            stroke_color=GREY,
-            stroke_width=2
-        )
-        
-        # 添加一些视觉元素来表示图像
-        # 使用动态shape获取实际尺寸（避免硬编码）
-        rows, cols = height_map.shape
-        pixel_grid = VGroup()
-        pixel_size = 0.5
-        spacing = 0.6
-        
-        for i in range(rows):
-            for j in range(cols):
-                intensity = height_map[i, j]
-                color = interpolate_color(BLACK, WHITE, intensity)
-                pixel = Square(side_length=pixel_size, fill_color=color, 
-                              fill_opacity=0.8, stroke_width=0.1)
-                # 动态计算位置
-                pixel.move_to(image_rect.get_left() + 
-                             RIGHT * (j * spacing - (cols - 1) * spacing / 2) + 
-                             UP * ((rows - 1) * spacing / 2 - i * spacing))
-                pixel_grid.add(pixel)
-        
-        image_2d = VGroup(image_rect, pixel_grid)
-        
-        scan_line = Line(
-            image_rect.get_left() + UP * image_rect.get_height() / 2,
-            image_rect.get_right() + UP * image_rect.get_height() / 2,
-            color=COLOR_DIFF,
-            stroke_width=4
-        )
-        
-        # 波形图坐标轴
-        waveform_axes = Axes(
-            x_range=[0, 100, 20],
-            y_range=[0, 255, 50],
-            x_length=6,
-            y_length=3,
-            tips=False,
-            axis_config={"stroke_opacity": 0.5}
-        ).next_to(image_2d, RIGHT, buff=1)
-        
-        # 提取中间行的像素值
-        middle_row_idx = test_height // 2
-        row_data = image_data[middle_row_idx, :, 0]
-        
-        # 创建波形图
-        waveform_points = [
-            waveform_axes.c2p(x, row_data[x]) 
-            for x in range(0, test_width, 5)
-        ]
-        waveform = VMobject().set_points_as_corners(waveform_points)
-        waveform.set_stroke(color=COLOR_CONTINUOUS, width=2)
-        
-        self.set_camera_orientation(phi=0, theta=-90*DEGREES)  # 俯视图
-        self.play(
-            FadeIn(image_2d),
-            Create(scan_line),
-            Create(waveform_axes),
-            Create(waveform),
-            run_time=2
-        )
-        
-        # 扫描线移动
-        self.play(
-            scan_line.animate.shift(DOWN * image_rect.get_height()),
-            run_time=3
-        )
-        self.wait(1)
-        
-        # Act 2: 维度切换 - 转换为3D
-        # 使用动态尺寸设置坐标轴范围
-        rows, cols = height_map.shape
+        # 创建 3D 坐标轴 (作为所有物体的父坐标系)
         axes_3d = ThreeDAxes(
-            x_range=[0, cols, max(1, cols//5)],
-            y_range=[0, rows, max(1, rows//5)],
-            z_range=[0, 2, 0.5],
+            x_range=[0, cols, 5],
+            y_range=[0, rows, 5],
+            z_range=[0, 2, 1],
             x_length=8,
             y_length=8,
-            z_length=4,
-            axis_config={"stroke_opacity": 0.3, "stroke_width": 1}
+            z_length=3,
+            axis_config={"include_tip": False, "stroke_opacity": 0.3}
         )
         
-        # 创建3D地形表面
-        def terrain_func(u, v):
-            i, j = int(v), int(u)
-            if 0 <= i < rows and 0 <= j < cols:
-                height = height_map[i, j] * 2  # 放大高度
-                return axes_3d.c2p(u, v, height)
-            return axes_3d.c2p(u, v, 0)
+        # --- 2. Act 1: 2D 像素网格 ---
+        pixel_grid = VGroup()
+        pixel_size = 0.4
         
-        # 使用动态分辨率，匹配降采样后的尺寸
-        rows, cols = height_map.shape
+        # 使用 axes_3d 的坐标系来定位，确保后续对齐
+        for i in range(rows):
+            for j in range(cols):
+                h = get_height_data(j, i)
+                color = interpolate_color(BLACK, WHITE, h)
+                # 关键：直接用 axes_3d.c2p 确保位置绝对匹配
+                pos = axes_3d.c2p(j, i, 0)
+                pixel = Square(side_length=pixel_size, stroke_width=0)
+                pixel.set_fill(color, opacity=1)
+                pixel.move_to(pos)
+                pixel_grid.add(pixel)
+        
+        # 【关键修复】整体居中，保持相对位置不变
+        world_group = VGroup(axes_3d, pixel_grid).center()
+        
+        self.set_camera_orientation(phi=0, theta=-90*DEGREES)
+        self.play(FadeIn(pixel_grid, lag_ratio=0.01), run_time=1.5)
+        self.wait(0.5)
+        
+        # --- 3. Act 2: 维度升华 (修复变形撕裂问题) ---
+        # 先旋转摄像机，进入 3D 视角
+        self.move_camera(phi=60*DEGREES, theta=-45*DEGREES, run_time=2.5)
+        
+        # 生成高精细度曲面（使用统一的高度函数）
         terrain_surface = Surface(
-            terrain_func,
-            u_range=[0, cols],
-            v_range=[0, rows],
-            resolution=(cols, rows),  # 动态分辨率，匹配降采样
+            lambda u, v: axes_3d.c2p(u, v, get_height_data(u, v) * 3),  # 高度夸张化 * 3
+            u_range=[0, cols-1],
+            v_range=[0, rows-1],
+            resolution=(40, 40),  # 更高分辨率，更平滑
             should_make_jagged=False
         )
-        
-        # 使用科技感颜色方案：低处蓝紫色，高处青白色（替代简陋的checkerboard）
         terrain_surface.set_style(
-            fill_color=BLUE_D,  # 基础颜色：深蓝
-            fill_opacity=0.8,
-            stroke_color=TEAL,  # 边框：青色，更有科技感
-            stroke_width=0.5
+            fill_opacity=0.6,
+            stroke_color=BLUE_A,
+            stroke_width=0.5,
+            fill_color=BLUE_E
         )
         
-        # 尝试使用基于高度的颜色映射（如果Manim版本支持）
-        # 如果不支持，至少使用统一的科技感颜色，比checkerboard更专业
-        try:
-            # 某些Manim版本可能支持 set_fill_by_value
-            terrain_surface.set_fill_by_value(
-                axes=axes_3d,
-                colorscale=[BLUE_E, BLUE_D, TEAL_C, WHITE],  # 从深蓝到白色的渐变
-                axis=2
-            )
-        except:
-            # 如果不支持，使用统一的科技蓝色
-            pass
+        # 此时 axes_3d 已经被 center() 移动过了，Surface 生成时是基于原始 axes 的
+        # 所以 Surface 也需要应用同样的 shift
+        surface_center_offset = world_group.get_center()
+        terrain_surface.shift(surface_center_offset)
         
-        # 相机旋转 + 图像转换
+        # 使用 Cross Dissolve 替代 ReplacementTransform（避免撕裂）
         self.play(
-            ReplacementTransform(image_2d, terrain_surface),
-            FadeOut(scan_line, waveform_axes, waveform),
-            self.camera.frame.animate.set_euler_angles(
-                phi=75*DEGREES,
-                theta=-45*DEGREES
-            ),
-            run_time=3
+            FadeIn(axes_3d),
+            FadeIn(terrain_surface),
+            pixel_grid.animate.set_opacity(0.1),  # 2D 像素变暗作为地基
+            run_time=2
         )
-        self.add(axes_3d)
         self.wait(1)
         
-        # Act 3: 全息扫描 - Sobel算子扫描
-        # 扫描框
-        scanner = Square(side_length=1.2).set_stroke(TEAL, width=3)
-        scanner.rotate(PI/2, axis=RIGHT)
+        # --- 4. Act 3: 全息扫描系统 (Holographic Scanner) ---
         
-        # 扫描器位置追踪
-        scan_tracker = ValueTracker(1)
+        # 4.1 制作"全息取景框" (四个角标)
+        scanner_corners = VGroup()
+        w, h = 1.2, 1.2
+        corner_len = 0.3
+        # 左上，右上，右下，左下
+        pts = [
+            [[-w/2, h/2 - corner_len, 0], [-w/2, h/2, 0], [-w/2 + corner_len, h/2, 0]],
+            [[w/2 - corner_len, h/2, 0], [w/2, h/2, 0], [w/2, h/2 - corner_len, 0]],
+            [[w/2, -h/2 + corner_len, 0], [w/2, -h/2, 0], [w/2 - corner_len, -h/2, 0]],
+            [[-w/2 + corner_len, -h/2, 0], [-w/2, -h/2, 0], [-w/2, -h/2 + corner_len, 0]],
+        ]
+        for p_list in pts:
+            corner = VMobject().set_points_as_corners([np.array(p) for p in p_list])
+            scanner_corners.add(corner)
+        
+        scanner_box = scanner_corners.set_color(TEAL).set_stroke(width=4)
+        # 添加激光束 (Laser Beam)
+        laser = DashedLine(start=ORIGIN + UP*0.5, end=ORIGIN + DOWN*2, color=TEAL, stroke_width=2)
+        scanner = VGroup(scanner_box, laser).rotate(PI/2, axis=RIGHT)  # 躺平
+        
+        # 4.2 制作 HUD 示波器 (悬浮在右侧)
+        hud_bg = Rectangle(width=5, height=3, color=BLUE_E, fill_opacity=0.8).set_stroke(width=0)
+        hud_bg.to_corner(DR, buff=0.5)
+        
+        hud_axes = Axes(
+            x_range=[0, cols, 5],
+            y_range=[-2, 2, 1],
+            x_length=4.5,
+            y_length=2,
+            axis_config={"include_tip": False, "font_size": 16}
+        ).move_to(hud_bg)
+        
+        hud_label = Text("GRADIENT (d/dx)", font_size=20, color=TEAL).next_to(hud_bg, UP, aligned_edge=LEFT)
+        hud_group = VGroup(hud_bg, hud_axes, hud_label)
+        
+        self.add_fixed_in_frame_mobjects(hud_group)  # 固定在屏幕上
+        self.play(FadeIn(hud_group))
+        
+        # --- 5. 动画驱动逻辑 ---
+        scan_tracker = ValueTracker(0)
         
         def update_scanner(mob):
             u = scan_tracker.get_value()
-            v = rows // 2  # 使用动态中心行
-            i, j = int(v), int(u)
-            if 0 <= i < rows and 0 <= j < cols:
-                z = height_map[i, j] * 2
+            v = rows / 2  # 扫描中间行
+            
+            # 使用统一的高度函数计算精确高度
+            z_math = get_height_data(u, v) * 3
+            
+            # 移动扫描器 (悬浮在地形上方 1.0 处)
+            # 使用 axes_3d 的坐标系变换，加上偏移量
+            base_pos = axes_3d.c2p(u, v, z_math + 1.0)
+            pos_3d = base_pos + surface_center_offset
+            mob.move_to(pos_3d)
+            
+            # 激光束伸缩：连接取景器和地面
+            ground_pos = axes_3d.c2p(u, v, z_math) + surface_center_offset
+            mob[1].put_start_and_end_on(pos_3d, ground_pos)
+            
+            # 颜色逻辑：导数越大，越红
+            delta = 0.1
+            deriv = (get_height_data(u + delta, v) - get_height_data(u - delta, v)) / (2 * delta)
+            
+            if abs(deriv) > 0.02:  # 阈值
+                mob[0].set_color(RED)
+                mob[1].set_color(RED)
             else:
-                z = 0
-            pos = axes_3d.c2p(u, v, z + 0.2)
-            mob.move_to(pos)
+                mob[0].set_color(TEAL)
+                mob[1].set_color(TEAL)
         
         scanner.add_updater(update_scanner)
-        
         self.add(scanner)
+        
+        # 示波器曲线 (动态绘制)
+        def get_derivative_func(x):
+            """计算x位置的导数"""
+            delta = 0.1
+            return (get_height_data(x + delta, rows/2) - get_height_data(x - delta, rows/2)) / (2 * delta) * 5
+        
+        graph = always_redraw(lambda: hud_axes.plot(
+            get_derivative_func,
+            x_range=[0, scan_tracker.get_value() + 0.1],
+            color=scanner[0].get_color()  # 颜色同步
+        ))
+        
+        # 示波器光点
+        graph_dot = always_redraw(lambda: Dot(
+            point=hud_axes.c2p(scan_tracker.get_value(), get_derivative_func(scan_tracker.get_value())),
+            color=WHITE,
+            radius=0.08
+        ).set_glow_factor(2))
+        
+        self.add_fixed_in_frame_mobjects(graph, graph_dot)
+        
+        # --- 6. 执行扫描（前半段）---
+        # 扫描到约1/3处暂停，进行像素级放大
+        pause_position = cols * 0.35  # 在第一个边缘附近暂停
+        
         self.play(
-            scan_tracker.animate.set_value(cols - 1),  # 使用动态列数
-            run_time=5,
+            scan_tracker.animate.set_value(pause_position),
+            run_time=3,
             rate_func=linear
         )
-        self.wait(1)
         
-        # Act 4: 特征图生成 - 显示边缘检测结果
-        # 创建边缘检测结果 (使用动态尺寸)
-        rows, cols = height_map.shape
-        edge_grid = VGroup()
-        pixel_size = 0.5
+        # --- 6.5. 像素级放大镜（新增）---
+        # 暂停扫描，放大到3x3像素格子
+        pause_u = pause_position
+        pause_v = rows / 2
         
-        for i in range(rows):
-            for j in range(cols):
-                # 在边缘处(中间列)设置为白色
-                center_col = cols // 2
-                if abs(j - center_col) <= 1:  # 中间1-2列
-                    color = WHITE
-                    opacity = 1.0
+        # 创建放大镜效果
+        zoom_factor = 8
+        pixel_magnifier = VGroup()
+        
+        # 创建3x3像素网格的放大视图
+        mag_axes = Axes(
+            x_range=[-1.5, 1.5, 0.5],
+            y_range=[-1.5, 1.5, 0.5],
+            x_length=3,
+            y_length=3,
+            axis_config={"stroke_opacity": 0.3, "include_tip": False},
+            tips=False
+        ).to_corner(UL, buff=1)
+        
+        # 计算3x3区域的像素值
+        pixel_values = []
+        for di in [-1, 0, 1]:
+            row_values = []
+            for dj in [-1, 0, 1]:
+                u_val = pause_u + dj
+                v_val = pause_v + di
+                if 0 <= u_val < cols and 0 <= v_val < rows:
+                    h = get_height_data(u_val, v_val)
+                    intensity = int(h * 255)
+                    row_values.append(intensity)
                 else:
-                    color = BLACK
-                    opacity = 0.3
-                pixel = Square(side_length=pixel_size, fill_color=color, 
-                              fill_opacity=opacity, stroke_width=0.1)
-                pixel.move_to(axes_3d.c2p(j, i, 0))
-                edge_grid.add(pixel)
+                    row_values.append(0)
+            pixel_values.append(row_values)
         
-        edge_image = edge_grid.scale(0.8)
+        # 绘制3x3像素格子
+        pixel_squares = VGroup()
+        pixel_labels = VGroup()
+        for i, di in enumerate([-1, 0, 1]):
+            for j, dj in enumerate([-1, 0, 1]):
+                x_pos = (j - 1) * 0.8
+                y_pos = (1 - i) * 0.8
+                intensity = pixel_values[i][j]
+                color_val = intensity / 255.0
+                color = interpolate_color(BLACK, WHITE, color_val)
+                
+                square = Square(side_length=0.7, stroke_width=2, stroke_color=WHITE)
+                square.set_fill(color, opacity=1)
+                square.move_to(mag_axes.c2p(x_pos, y_pos))
+                pixel_squares.add(square)
+                
+                # 添加数值标签
+                label = Text(str(intensity), font_size=16, color=WHITE if intensity < 128 else BLACK)
+                label.move_to(square.get_center())
+                pixel_labels.add(label)
+        
+        # 显示卷积计算过程
+        calc_text = VGroup(
+            MathTex("(-1) \\times " + str(pixel_values[1][0]), font_size=24, color=COLOR_DIFF),
+            MathTex("+", font_size=24, color=WHITE),
+            MathTex("0 \\times " + str(pixel_values[1][1]), font_size=24, color=WHITE),
+            MathTex("+", font_size=24, color=WHITE),
+            MathTex("1 \\times " + str(pixel_values[1][2]), font_size=24, color=COLOR_DIFF),
+            MathTex("=", font_size=24, color=WHITE),
+        ).arrange(RIGHT, buff=0.2)
+        
+        result_value = -pixel_values[1][0] + pixel_values[1][2]
+        result_text = MathTex(str(result_value), font_size=32, color=GREEN)
+        calc_group = VGroup(calc_text, result_text).arrange(RIGHT, buff=0.3)
+        calc_group.next_to(mag_axes, DOWN, buff=0.5)
+        
+        magnifier_title = Text("像素级放大镜", font_size=24, color=TEAL).next_to(mag_axes, UP, buff=0.3)
+        
+        # 把所有放大镜元素打包
+        magnifier_group = VGroup(
+            mag_axes, pixel_squares, pixel_labels, 
+            magnifier_title, calc_group
+        )
+        
+        explanation_voice = Text("让我们放大看看，\nSobel算子是如何在像素层面工作的", 
+                                font_size=20, color=WHITE).next_to(calc_group, DOWN, buff=0.5)
+        
+        # 把所有放大镜元素打包（先不包含calc_group和explanation_voice，它们需要单独动画）
+        magnifier_base = VGroup(
+            mag_axes, pixel_squares, pixel_labels, magnifier_title
+        )
+        
+        # 关键：将它们固定在相机帧上，这样它们永远是正对屏幕的 2D UI
+        self.add_fixed_in_frame_mobjects(magnifier_base, calc_group, explanation_voice)
+        
+        # 暂停扫描，显示放大镜
+        scanner.remove_updater(update_scanner)
+        
+        # 初始设为透明
+        magnifier_base.set_opacity(0)
+        calc_group.set_opacity(0)
+        explanation_voice.set_opacity(0)
+        
+        # 动画逻辑：让背景变暗，突出前景UI
+        self.play(
+            # 让背景的 3D 元素变暗，突出前景 UI
+            terrain_surface.animate.set_opacity(0.2),
+            axes_3d.animate.set_opacity(0.1),
+            pixel_grid.animate.set_opacity(0.05),
+            scanner.animate.set_opacity(0.3),
+            hud_group.animate.set_opacity(0.3),
+            graph.animate.set_opacity(0.3),
+            graph_dot.animate.set_opacity(0.3),
+            
+            # 淡入基础UI
+            magnifier_base.animate.set_opacity(1),
+            run_time=1.5
+        )
+        self.wait(0.5)
         
         self.play(
-            FadeOut(terrain_surface, axes_3d, scanner),
-            FadeIn(edge_image),
-            self.camera.frame.animate.set_euler_angles(phi=0, theta=-90*DEGREES),
+            calc_group.animate.set_opacity(1),
             run_time=2
         )
         self.wait(1.5)
         
+        self.play(
+            explanation_voice.animate.set_opacity(1),
+            run_time=2
+        )
+        self.wait(1)
+        
+        # 退出放大镜时
+        self.play(
+            magnifier_base.animate.set_opacity(0),
+            calc_group.animate.set_opacity(0),
+            explanation_voice.animate.set_opacity(0),
+            # 恢复背景亮度
+            terrain_surface.animate.set_opacity(0.6),
+            axes_3d.animate.set_opacity(0.3),
+            pixel_grid.animate.set_opacity(0.1),
+            scanner.animate.set_opacity(1),
+            hud_group.animate.set_opacity(1),
+            graph.animate.set_opacity(1),
+            graph_dot.animate.set_opacity(1),
+            run_time=1
+        )
+        
+        # 记得移除固定对象，防止污染后续场景
+        self.remove_fixed_in_frame_mobjects(magnifier_base, calc_group, explanation_voice)
+        self.remove(magnifier_base, calc_group, explanation_voice)
+        
+        scanner.add_updater(update_scanner)
+        
+        # --- 6. 执行扫描（后半段）---
+        self.play(
+            scan_tracker.animate.set_value(cols-1),
+            run_time=5,
+            rate_func=linear
+        )
+        
+        # 收尾
+        scanner.remove_updater(update_scanner)
+        self.wait(1)
+        
+        # Act 4: 结果输出
+        # 镜头拉回
+        self.move_camera(phi=0, theta=-90*DEGREES, run_time=2)
+        
+        edge_text = Text("Edges Detected", font_size=48, color=WHITE).move_to(ORIGIN)
+        self.play(
+            FadeOut(terrain_surface),
+            FadeOut(axes_3d),
+            FadeOut(pixel_grid),
+            FadeOut(scanner),
+            FadeOut(hud_group),
+            FadeOut(graph),
+            FadeOut(graph_dot),
+            FadeIn(edge_text),
+            run_time=2
+        )
+        self.wait(1)
+        
         # 清理
-        self.play(FadeOut(edge_image), run_time=1)
+        self.play(FadeOut(edge_text), run_time=1)
 
     def transition_4_5(self):
         """场景4到场景5的过渡"""
