@@ -132,7 +132,8 @@ class SobelUniverse(ThreeDScene):
         
         # Act 2: 幽灵变换 - 离散采样
         ghost_graph = func_continuous.copy()
-        ghost_graph.set_stroke(color=COLOR_GHOST, width=1, opacity=OPACITY_GHOST)
+        # 初始状态：让幽灵线完全重合，且不透明，这样添加时肉眼看不出变化
+        ghost_graph.set_stroke(color=COLOR_CONTINUOUS, width=3, opacity=1)
         
         # 创建离散采样点
         num_samples = 10
@@ -147,21 +148,35 @@ class SobelUniverse(ThreeDScene):
             dot = Dot(end_point, color=COLOR_DISCRETE, radius=0.08)
             discrete_stems.add(stem, dot)
         
+        # 【关键修复】先添加物体，再播放动画
+        self.add(ghost_graph) 
+        
         self.play(
-            self.add(ghost_graph),
+            # 原函数变透明消失
             func_continuous.animate.set_opacity(0),
-            ghost_graph.animate.set_stroke(opacity=OPACITY_GHOST),
+            # 幽灵线变成灰色虚影
+            ghost_graph.animate.set_stroke(color=COLOR_GHOST, width=1, opacity=OPACITY_GHOST),
+            # 采样杆生长出来
             Create(discrete_stems),
             run_time=2
         )
         self.wait(0.5)
         
-        # Act 3: 聚焦困境
+        # ==========================================
+        # Act 3: 聚焦困境 (修复版)
+        # ==========================================
         focus_point = axes.c2p(5, continuous_func(5))
-        question_mark = Text("?", font_size=72, color=YELLOW).move_to(focus_point + UP * 1.5)
+        
+        # 1. 把场景里的所有东西打个包
+        scene_group = VGroup(axes, func_continuous, ghost_graph, discrete_stems, tangent_line, slope_text)
+        
+        # 2. 问号直接生成在屏幕中心上方
+        question_mark = Text("?", font_size=72, color=YELLOW).move_to(UP * 1.5)
         
         self.play(
-            self.camera.frame.animate.scale(0.4).move_to(focus_point),
+            # 【核心修复】：不要动相机(self.camera.frame)，改为动物体(scene_group)
+            # 以 focus_point 为中心放大 2.5 倍，并移到屏幕中心
+            scene_group.animate.scale(2.5, about_point=focus_point).shift(ORIGIN - focus_point),
             Write(question_mark),
             run_time=2
         )
@@ -169,12 +184,10 @@ class SobelUniverse(ThreeDScene):
         
         # 清理
         self.play(
-            FadeOut(VGroup(axes, func_continuous, ghost_graph, discrete_stems, 
-                          tangent_line, slope_text, question_mark)),
-            self.camera.frame.animate.scale(2.5).move_to(ORIGIN),
+            FadeOut(scene_group),
+            FadeOut(question_mark),
             run_time=1
         )
-
     def transition_1_2(self):
         """场景1到场景2的过渡"""
         self.wait(0.5)
@@ -507,20 +520,26 @@ class SobelUniverse(ThreeDScene):
     # ========================================================================
     
     def setup_scene_3_matrices(self):
-        """Scene 3: Sobel算子的构造"""
+        """Scene 3: Sobel算子的构造 (修复中文LaTeX报错版)"""
         
         # Act 1: 身份确认 - 展示两个向量
         kernel_x = Matrix([[-1, 0, 1]], element_alignment_corner=ORIGIN)
         kernel_x.set_color(COLOR_DIFF)
         kernel_x_label = Brace(kernel_x, DOWN)
-        kernel_x_text = kernel_x_label.get_text("微分\\/高通").set_color(COLOR_DIFF)
+        
+        # 【修复 1】：使用 Text 而不是 get_text (避免 LaTeX 编译中文)
+        kernel_x_text = Text("微分/高通", font_size=24, color=COLOR_DIFF).next_to(kernel_x_label, DOWN)
+        
         kernel_x_group = VGroup(kernel_x, kernel_x_label, kernel_x_text)
         kernel_x_group.to_edge(LEFT).shift(UP)
         
         kernel_y = Matrix([[1], [2], [1]], element_alignment_corner=ORIGIN)
         kernel_y.set_color(COLOR_SMOOTH)
         kernel_y_label = Brace(kernel_y, RIGHT)
-        kernel_y_text = kernel_y_label.get_text("平滑\\/低通").set_color(COLOR_SMOOTH)
+        
+        # 【修复 2】：使用 Text 而不是 get_text
+        kernel_y_text = Text("平滑/低通", font_size=24, color=COLOR_SMOOTH).next_to(kernel_y_label, RIGHT)
+        
         kernel_y_group = VGroup(kernel_y, kernel_y_label, kernel_y_text)
         kernel_y_group.to_edge(UP)
         
@@ -554,7 +573,7 @@ class SobelUniverse(ThreeDScene):
             run_time=2
         )
         
-        # 演示广播过程 (简化版: 直接显示结果)
+        # 演示广播过程
         multiplication_sign = MathTex("\\times", font_size=48).move_to(ORIGIN)
         self.play(Write(multiplication_sign), run_time=0.5)
         self.wait(0.5)
@@ -600,7 +619,7 @@ class SobelUniverse(ThreeDScene):
         )
         self.wait(1)
         
-        # Act 4: 卷积可分离性 - 计算效率说明（新增）
+        # Act 4: 卷积可分离性 - 计算效率说明
         efficiency_title = Text("卷积的可分离性", font_size=32, color=WHITE).move_to(ORIGIN + UP * 2.5)
         
         # 展示计算效率对比
@@ -628,7 +647,7 @@ class SobelUniverse(ThreeDScene):
         efficiency_comparison.move_to(ORIGIN)
         
         vs_text = Text("vs", font_size=28, color=WHITE)
-        vs_text.move_to(efficiency_comparison.get_center())  # 放在两个算式中间
+        vs_text.move_to(efficiency_comparison.get_center())
         
         self.play(
             Write(efficiency_title),
