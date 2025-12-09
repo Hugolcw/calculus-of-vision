@@ -126,9 +126,9 @@ class SobelUniverse(ThreeDScene):
         ).next_to(tangent_line, UP))
         
         # 播放动画
-        self.play(Create(axes), Create(func_continuous), run_time=1)
+        self.play(Create(axes), Create(func_continuous), run_time=1, rate_func=smooth)
         self.add(tangent_line, slope_text)
-        self.play(tangent_tracker.animate.set_value(8), run_time=2)
+        self.play(tangent_tracker.animate.set_value(8), run_time=2, rate_func=smooth)
         
         # Act 2: 幽灵变换 - 离散采样
         ghost_graph = func_continuous.copy()
@@ -144,8 +144,8 @@ class SobelUniverse(ThreeDScene):
             y = continuous_func(x)
             start_point = axes.c2p(x, 0)
             end_point = axes.c2p(x, y)
-            stem = Line(start_point, end_point, color=COLOR_DISCRETE, stroke_width=3)
-            dot = Dot(end_point, color=COLOR_DISCRETE, radius=0.08)
+            stem = Line(start_point, end_point, color=COLOR_DISCRETE, stroke_width=2.5)
+            dot = Dot(end_point, color=COLOR_DISCRETE, radius=0.05)
             discrete_stems.add(stem, dot)
         
         # 【关键修复】先添加物体，再播放动画
@@ -171,7 +171,7 @@ class SobelUniverse(ThreeDScene):
         scene_group = VGroup(axes, func_continuous, ghost_graph, discrete_stems, tangent_line, slope_text)
         
         # 2. 问号直接生成在屏幕中心上方
-        question_mark = Text("?", font_size=72, color=YELLOW).move_to(UP * 1.5)
+        question_mark = MathTex("?", font_size=72, color=YELLOW).move_to(UP * 1.5)
         
         self.play(
             # 【核心修复】：不要动相机(self.camera.frame)，改为动物体(scene_group)
@@ -265,8 +265,8 @@ class SobelUniverse(ThreeDScene):
             f_double_backward_part = taylor_backward[-1] if len(taylor_backward) > 0 else taylor_backward
         
         # 创建高亮框来标记相同项
-        f_x_forward_rect = SurroundingRectangle(f_x_forward_part, color=COLOR_DIFF, buff=0.1)
-        f_x_backward_rect = SurroundingRectangle(f_x_backward_part, color=COLOR_DIFF, buff=0.1)
+        f_x_forward_rect = SurroundingRectangle(f_x_forward_part, color=COLOR_DIFF, buff=0.15, corner_radius=0.08)
+        f_x_backward_rect = SurroundingRectangle(f_x_backward_part, color=COLOR_DIFF, buff=0.15, corner_radius=0.08)
         
         self.play(
             Create(f_x_forward_rect),
@@ -284,8 +284,8 @@ class SobelUniverse(ThreeDScene):
         )
         
         # 同样处理 f''(x) 项
-        f_double_prime_forward_rect = SurroundingRectangle(f_double_forward_part, color=COLOR_DIFF, buff=0.1)
-        f_double_prime_backward_rect = SurroundingRectangle(f_double_backward_part, color=COLOR_DIFF, buff=0.1)
+        f_double_prime_forward_rect = SurroundingRectangle(f_double_forward_part, color=COLOR_DIFF, buff=0.15, corner_radius=0.08)
+        f_double_prime_backward_rect = SurroundingRectangle(f_double_backward_part, color=COLOR_DIFF, buff=0.15, corner_radius=0.08)
         
         self.play(
             Create(f_double_prime_forward_rect),
@@ -329,8 +329,11 @@ class SobelUniverse(ThreeDScene):
         coefficient_text = MathTex("[-1, 0, 1]", font_size=36).next_to(diff_formula, DOWN)
         self.play(Write(coefficient_text), run_time=1)
         self.play(
-            Transform(coefficient_text, kernel_x.scale(1.5).to_edge(DOWN)),
-            run_time=1.5
+            FadeOut(coefficient_text, shift=DOWN * 0.2),
+            GrowFromCenter(kernel_x),
+            kernel_x.animate.scale(1.5).to_edge(DOWN),
+            run_time=1.5,
+            rate_func=smooth
         )
         self.wait(1)
         
@@ -392,7 +395,7 @@ class SobelUniverse(ThreeDScene):
         self.wait(0.5)
         
         self.play(
-            Create(noisy_points),
+            LaggedStart(*[FadeIn(dot, scale=0.5) for dot in noisy_points], lag_ratio=0.05, run_time=1.5),
             Write(noisy_label),
             run_time=1.5
         )
@@ -408,10 +411,10 @@ class SobelUniverse(ThreeDScene):
             dy_scaled = dy * 2
             start_point = axes.c2p(x_mid, 0)
             end_point = axes.c2p(x_mid, dy_scaled)
-            diff_line = Line(start_point, end_point, color=RED, stroke_width=2)
+            diff_line = Line(start_point, end_point, color=RED_C, stroke_width=1.8, stroke_opacity=0.8)
             diff_points.add(diff_line)
         
-        disaster_text = Text("直接求导：噪声被放大！", font_size=32, color=RED).move_to(ORIGIN + DOWN * 2.5)
+        disaster_text = Text("直接求导：噪声被放大！", font_size=32, color=RED_C).move_to(ORIGIN + DOWN * 2.5)
         
         self.play(
             FadeOut(clean_graph, clean_label),
@@ -570,28 +573,40 @@ class SobelUniverse(ThreeDScene):
         self.play(
             kernel_x_group.animate.move_to(ORIGIN + LEFT * 2),
             kernel_y_group.animate.move_to(ORIGIN + UP * 2),
-            run_time=2
+            run_time=2,
+            rate_func=smooth
         )
         
         # 演示广播过程
-        multiplication_sign = MathTex("\\times", font_size=48).move_to(ORIGIN)
+        multiplication_sign = MathTex("\\times", font_size=48)
+        equation_left = VGroup(kernel_x_group, multiplication_sign, kernel_y_group).arrange(
+            RIGHT, buff=0.6, aligned_edge=ORIGIN
+        ).move_to(ORIGIN + UP * 0.5)
+        multiplication_sign.move_to(equation_left[1])
         self.play(Write(multiplication_sign), run_time=0.5)
-        self.wait(0.5)
+        self.play(
+            Transform(VGroup(kernel_x_group, kernel_y_group), VGroup(equation_left[0], equation_left[2])),
+            run_time=1.5,
+            rate_func=smooth
+        )
         
-        # 变换为最终矩阵
-        result_text = MathTex("=", font_size=48).next_to(multiplication_sign, RIGHT, buff=0.5)
-        kernel_sobel.next_to(result_text, RIGHT, buff=0.5)
+        # 变换为最终矩阵并对齐中心
+        result_text = MathTex("=", font_size=48)
+        equation_full = VGroup(equation_left, result_text, kernel_sobel).arrange(
+            RIGHT, buff=0.6, aligned_edge=ORIGIN
+        ).move_to(ORIGIN)
+        result_text.move_to(equation_full[1])
+        kernel_sobel.move_to(equation_full[2])
         
         # 颜色融合效果
         kernel_sobel.set_color_by_gradient(COLOR_DIFF, GOLD, COLOR_SMOOTH)
         
         self.play(
             Write(result_text),
-            Transform(
-                VGroup(kernel_x_group, kernel_y_group, multiplication_sign),
-                kernel_sobel
-            ),
-            run_time=2
+            Transform(VGroup(kernel_x_group, kernel_y_group, multiplication_sign), equation_left),
+            FadeIn(kernel_sobel),
+            run_time=2,
+            rate_func=smooth
         )
         self.wait(1)
         
@@ -600,7 +615,8 @@ class SobelUniverse(ThreeDScene):
         center_rect = SurroundingRectangle(
             kernel_sobel.get_entries()[4],  # 中心元素 (0)
             color=YELLOW,
-            buff=0.1
+            buff=0.12,
+            corner_radius=0.06
         )
         edge_highlight = VGroup()
         edge_indices = [0, 2, 6, 8]  # 四个角
@@ -608,7 +624,8 @@ class SobelUniverse(ThreeDScene):
             rect = SurroundingRectangle(
                 kernel_sobel.get_entries()[idx],
                 color=RED,
-                buff=0.1
+                buff=0.12,
+                corner_radius=0.06
             )
             edge_highlight.add(rect)
         
@@ -735,7 +752,7 @@ class SobelUniverse(ThreeDScene):
         
         # --- 3. Act 2: 维度升华 (修复变形撕裂问题) ---
         # 先旋转摄像机，进入 3D 视角
-        self.move_camera(phi=60*DEGREES, theta=-45*DEGREES, run_time=2.5)
+        self.move_camera(phi=60*DEGREES, theta=-45*DEGREES, run_time=2.5, rate_func=smooth)
         
         # 生成高精细度曲面（使用统一的高度函数）
         terrain_surface = Surface(
@@ -868,7 +885,7 @@ class SobelUniverse(ThreeDScene):
         self.play(
             scan_tracker.animate.set_value(pause_position),
             run_time=3,
-            rate_func=linear
+            rate_func=smooth
         )
         
         # --- 6.5. 像素级放大镜（新增）---
@@ -922,8 +939,11 @@ class SobelUniverse(ThreeDScene):
                 pixel_squares.add(square)
                 
                 # 添加数值标签
-                label = Text(str(intensity), font_size=16, color=WHITE if intensity < 128 else BLACK)
-                label.move_to(square.get_center())
+                label = MathTex(
+                    str(intensity),
+                    font_size=16,
+                    color=WHITE if intensity < 128 else BLACK
+                ).move_to(square.get_center())
                 pixel_labels.add(label)
         
         # 显示卷积计算过程
@@ -1023,7 +1043,7 @@ class SobelUniverse(ThreeDScene):
         self.play(
             scan_tracker.animate.set_value(cols-1),
             run_time=5,
-            rate_func=linear
+            rate_func=smooth
         )
         
         # 收尾
@@ -1032,9 +1052,9 @@ class SobelUniverse(ThreeDScene):
         
         # Act 4: 结果输出
         # 镜头拉回
-        self.move_camera(phi=0, theta=-90*DEGREES, run_time=2)
+        self.move_camera(phi=0, theta=-90*DEGREES, run_time=2, rate_func=smooth)
         
-        edge_text = Text("Edges Detected", font_size=48, color=WHITE).move_to(ORIGIN)
+        edge_text = Tex("Edges\\ Detected", font_size=48, color=WHITE, tex_template=TEX_TEMPLATE).move_to(ORIGIN)
         self.play(
             FadeOut(terrain_surface),
             FadeOut(axes_3d),
