@@ -15,3 +15,5 @@ __pycache__/
 .DS_Storemedia/
 __pycache__/
 images/
+
+/渲染视频/
