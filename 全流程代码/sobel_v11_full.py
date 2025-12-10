@@ -289,23 +289,63 @@ class Scene2Taylor(Scene):
         fdd_forward = right_tex.get_part_by_tex("f''(x)")
         fdd_backward = left_tex.get_part_by_tex("f''(x)")
 
-        fx_rect1 = SurroundingRectangle(fx_forward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08)
-        fx_rect2 = SurroundingRectangle(fx_backward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08)
-        fdd_rect1 = SurroundingRectangle(fdd_forward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08)
-        fdd_rect2 = SurroundingRectangle(fdd_backward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08)
+        # 几何直觉：线性近似线 + 误差箭头
+        tangent_geo = Line(
+            axes.c2p(x0, y0),
+            axes.c2p(x0 + 1.2, y0 + (g(x0 + 0.01) - g(x0 - 0.01)) / 0.02 * 1.2),
+            color=COLOR_DIFF,
+            stroke_width=3,
+        )
+        err_arrow_lin = Arrow(
+            axes.c2p(x0 + 1.0, g(x0 + 1)),
+            axes.c2p(x0 + 1.0, g(x0) + (g(x0 + 0.01) - g(x0 - 0.01)) / 0.02 * 1.0),
+            color=COLOR_DIFF,
+            buff=0.05,
+            stroke_width=3,
+        )
 
-        self.play(Create(fx_rect1), Create(fx_rect2), run_time=1.0)
-        self.play(FadeOut(fx_rect1), FadeOut(fx_rect2),
-                  fx_forward.animate.set_opacity(0.25),
-                  fx_backward.animate.set_opacity(0.25),
-                  run_time=1.0)
+        parabola_geo = axes.plot(lambda x: g(x0) + (g(x0 + 0.01) - g(x0 - 0.01)) / 0.02 * (x - x0) + 0.5 * (x - x0) ** 2,
+                                 x_range=[x0 - 1.2, x0 + 1.2],
+                                 color=COLOR_SMOOTH, stroke_width=3)
+        err_arrow_curv = Arrow(
+            axes.c2p(x0 + 1.0, g(x0 + 1)),
+            axes.c2p(x0 + 1.0, g(x0) + (g(x0 + 0.01) - g(x0 - 0.01)) / 0.02 * 1.0 + 0.5 * 1.0 ** 2),
+            color=COLOR_SMOOTH,
+            buff=0.05,
+            stroke_width=3,
+        )
 
-        self.play(Create(fdd_rect1), Create(fdd_rect2), run_time=1.0)
-        self.play(FadeOut(fdd_rect1), FadeOut(fdd_rect2),
-                  fdd_forward.animate.set_opacity(0.25),
-                  fdd_backward.animate.set_opacity(0.25),
-                  run_time=1.0)
-        self.wait(1.2)
+        self.play(Create(tangent_geo), run_time=0.8)
+        self.play(GrowArrow(err_arrow_lin), run_time=0.8)
+        self.wait(0.5)
+        self.play(ReplacementTransform(tangent_geo, parabola_geo), run_time=1.0)
+        self.play(GrowArrow(err_arrow_curv), run_time=0.8)
+        self.wait(0.8)
+
+        # 动态抵消：f(x) 和 f''(x) 项互相吸附到中心 X
+        # 将 f(x) 和 f''(x) 的符号拉回几何中心后碰撞消失，体现对称抵消
+        collide_point_fx = center_pt
+        collide_point_fdd = center_pt + DOWN * 0.2
+        self.play(
+            fx_forward.animate.move_to(collide_point_fx).set_opacity(0.6),
+            fx_backward.animate.move_to(collide_point_fx).set_opacity(0.6),
+            run_time=0.8,
+        )
+        self.play(
+            ApplyWave(VGroup(fx_forward, fx_backward), amplitude=0.2, run_time=0.6),
+            FadeOut(VGroup(fx_forward, fx_backward)),
+        )
+
+        self.play(
+            fdd_forward.animate.move_to(collide_point_fdd).set_opacity(0.6),
+            fdd_backward.animate.move_to(collide_point_fdd).set_opacity(0.6),
+            run_time=0.8,
+        )
+        self.play(
+            ApplyWave(VGroup(fdd_forward, fdd_backward), amplitude=0.2, run_time=0.6),
+            FadeOut(VGroup(fdd_forward, fdd_backward)),
+        )
+        self.wait(0.8)
 
         diff_tex = MathTex(
             r"f'(x) \approx \dfrac{f(x+1) - f(x-1)}{2}",
@@ -386,6 +426,30 @@ class Scene3SobelConstruct(Scene):
         self.play(Create(diff_axes), Create(grad_graph), run_time=1.6)
         self.wait(1.0)
 
+        # 纯微分输出的“灾难性”抖动
+        self.play(ApplyWave(grad_graph, amplitude=0.6, run_time=1.2), Wiggle(grad_graph, scale_value=1.05, run_time=1.0))
+
+        # 新增：卷积窗滑过噪声峰，输出值抖动
+        kernel_window = Rectangle(width=1.0, height=0.8, color=COLOR_DIFF, stroke_width=3)
+        kernel_window.move_to(axes.c2p(1, 0))
+        output_value = DecimalNumber(0, num_decimal_places=2, color=COLOR_DIFF, font_size=28)
+        output_bg = BackgroundRectangle(output_value, color=BLACK, fill_opacity=0.7, buff=0.15, corner_radius=0.08)
+        output_group = VGroup(output_bg, output_value).next_to(diff_axes, UP, buff=0.3)
+        self.play(FadeIn(kernel_window), FadeIn(output_group), run_time=0.8)
+
+        def update_output(mob):
+            x = kernel_window.get_center()[0]
+            x_val = axes.x_axis.p2n(np.array([x, 0, 0]))
+            val = fake_grad(x_val)
+            output_value.set_value(val)
+        output_group.add_updater(update_output)
+
+        self.play(kernel_window.animate.shift(RIGHT * 6), run_time=2.4, rate_func=smooth)
+        # 噪声尖峰处震动
+        self.play(ApplyWave(output_group, amplitude=0.3, run_time=0.8), Wiggle(output_group, scale_value=1.1, run_time=0.8))
+        self.wait(0.6)
+        output_group.remove_updater(update_output)
+
         hud.show("先平滑，再微分：用 [1,2,1]^T 做低通，再用 [-1,0,1] 做高通。", wait_time=2.4)
 
         smooth_kernel = Matrix([[1], [2], [1]], bracket_h_buff=0.2, bracket_v_buff=0.2)
@@ -395,6 +459,39 @@ class Scene3SobelConstruct(Scene):
 
         self.play(FadeIn(smooth_group, shift=DOWN * 0.2), run_time=1.0)
         self.wait(0.8)
+
+        # 平滑窗口抚平曲线
+        smooth_window = Rectangle(width=1.4, height=1.0, color=COLOR_SMOOTH, stroke_width=3)
+        smooth_window.set_fill(COLOR_SMOOTH, opacity=0.15)
+        smooth_window.move_to(axes.c2p(1, 0))
+        self.play(FadeIn(smooth_window, shift=UP * 0.1), run_time=0.8)
+
+        win_center = ValueTracker(axes.x_axis.p2n(smooth_window.get_center()))
+        window_width = 1.4
+
+        def blend_func(x):
+            c = win_center.get_value()
+            w = max(window_width / 2, 1e-6)
+            weight = np.clip(1 - abs(x - c) / w, 0, 1)
+            return (1 - weight) * noisy(x) + weight * clean(x)
+
+        blend_graph = always_redraw(lambda: axes.plot(
+            blend_func,
+            x_range=[0, 10],
+            color=COLOR_SMOOTH,
+            stroke_width=3.5
+        ))
+
+        self.play(ReplacementTransform(noisy_graph, blend_graph), run_time=0.8)
+        self.play(
+            smooth_window.animate.shift(RIGHT * 6),
+            win_center.animate.set_value(axes.x_axis.p2n(smooth_window.get_center() + RIGHT * 6)),
+            run_time=2.2,
+            rate_func=smooth
+        )
+        blend_graph.clear_updaters()
+        self.play(FadeOut(blend_graph), FadeIn(clean_graph), run_time=0.8)
+        self.play(clean_graph.animate.set_stroke(opacity=1.0), run_time=0.6)
 
         multiply = MathTex(r"\times", font_size=44, color=WHITE)
         equal = MathTex(r"=", font_size=44, color=WHITE)
@@ -495,12 +592,11 @@ class Scene4Vision(ThreeDScene):
             mob[1].put_start_and_end_on(pos, ground)
             delta = 0.1
             deriv = (height(u + delta, v) - height(u - delta, v)) / (2 * delta)
-            if abs(deriv) > 0.18:
-                mob[0].set_color(COLOR_DIFF)
-                mob[1].set_color(COLOR_DIFF)
-            else:
-                mob[0].set_color(COLOR_SMOOTH)
-                mob[1].set_color(COLOR_SMOOTH)
+            T_min, T_max = 0.02, 0.4
+            alpha = np.clip((abs(deriv) - T_min) / (T_max - T_min), 0, 1)
+            new_color = interpolate_color(COLOR_SMOOTH, COLOR_DIFF, alpha)
+            mob[0].set_color(new_color)
+            mob[1].set_color(new_color)
 
         scanner_group.add_updater(update_scanner)
         self.add(scanner_group)
@@ -685,9 +781,16 @@ class Scene5Outro(Scene):
         # 哲学文本
         philosophy = safer_text("让机器在嘈杂世界里，找到最清晰的边界。", font_size=32, color=YELLOW_C)
         phil_bg = BackgroundRectangle(philosophy, fill_opacity=0.7, color=BLACK, buff=0.3, corner_radius=0.08)
-        phil_group = VGroup(phil_bg, philosophy).to_edge(UP, buff=1.0)
-        self.add_fixed_in_frame_mobjects(phil_group)
-        self.play(FadeIn(phil_group, shift=UP * 0.2), run_time=1.2)
+        phil_group = VGroup(phil_bg, philosophy).move_to(ORIGIN)
+        # 爆发式显现 + 弹性
+        self.play(
+            Succession(
+                phil_group.animate.scale(1.1).set_opacity(0),
+                phil_group.animate.scale(1.0).set_opacity(1),
+                run_time=0.8,
+                rate_func=rate_functions.ease_out_back,
+            )
+        )
         self.wait(3.0)
 
         # 片尾声明
