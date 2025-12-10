@@ -146,6 +146,14 @@ pip install manim numpy
 - **Linux**: `sudo apt-get install texlive-full`（Ubuntu/Debian）
 - **macOS**: `brew install --cask mactex`（使用 Homebrew）
 
+#### 迭代版（全流程代码）快速预览
+
+```bash
+cd calculus-of-vision/全流程代码
+manim -pql sobel_v10_iterative.py SobelUniverse   # Scene 0 引言 + 字幕系统
+manim -pqh sobel_v10_iterative.py SobelUniverse   # 高质量
+```
+
 ### 2. 渲染视频
 
 #### 低质量预览（快速调试）
@@ -191,6 +199,10 @@ media/videos/sobel_complete/[质量]/SobelUniverse.mp4
 ```
 calculus-of-vision/
 ├── README.md                         # 项目技术文档（本文件）
+├── 全流程代码/                        # 版本化迭代代码（v01-v10）
+│   ├── sobel_v10_iterative.py       # 最新迭代版，含Scene 0 & 字幕系统
+│   ├── sobel_v09_complete_rich.py   # 上一里程碑的完整版
+│   ├── sobel_v01_basic.py ...       # 早期版本，用于对比演进
 ├── final_version/                    # 最终版本文件夹
 │   ├── sobel_complete.py            # 完整源代码（主文件）
 │   ├── 脚本文档.md                   # 创作思路、作品意义、素材来源
@@ -366,6 +378,30 @@ image_data = get_downsampled_array("path/to/your/image.png", rate=10)
 - `时长估算.md` - 各场景时长分析
 - `提交指南与检查清单.md` - 提交要求 + 勾选
 - `代码实现指南.md` - 代码架构/模块/编码注意事项
+
+---
+
+## 🧭 新增资源速览
+
+- **全流程代码/**：保留 v01-v10 的演进版本，便于对比思路；`sobel_v10_iterative.py` 内置 Scene 0 引言与字幕管理器（自动时长、平滑切换、统一色板/字体），默认只跑 Scene 0，适合讲稿彩排。
+- **MD文档/01_项目概览与提交**：
+  - `迭代版本说明.md`：Scene 0 目标、时长 75-90s、字幕系统用法、检查清单与下一步计划。
+  - `提交指南与检查清单.md`：一页式提交流程（填组员→渲染→重命名→打包）+ 勾选表。
+  - `代码实现指南.md`：全局色板/字体规范、各场景关键要点、避坑与开发流程清单。
+  - `说明.md`：组员名单模板（需补全姓名/学号/分工）。
+- **MD文档/03_方案与制作指南**：
+  - `旁白与剪辑指南.md`：全场景旁白时间轴、重音/停顿提示，定格/变速剪辑策略解决 127.5s 画面对应 5-7 分钟旁白的“手风琴”问题。
+  - `时长估算.md`：各场景精确用时，总计 127.5s（纯动画），含旁白预计 6-7 分钟；已计入 Scene 3.5 噪声、卷积可分离性与像素级放大镜等新增内容。
+
+---
+
+## ✅ 提交与检查要点（速览）
+
+- 填写 `final_version/说明.md`：补齐姓名、学号、分工。
+- 渲染最终版：`manim -pqh final_version/sobel_complete.py SobelUniverse`（输出 `media/videos/sobel_complete/[质量]/SobelUniverse.mp4`）。
+- 统一命名（示例）：`数学与生活 - Sobel算子与视觉的微积分 - 2023001张三 - 视频.mp4 / 脚本.md / 代码.py`。
+- 打包压缩：同名 `.zip`，仅包含视频、脚本文档、源代码、`说明.md` 四个必需文件。
+- 提交前对照 `提交指南与检查清单.md` 勾选：时长 ≤ 8 分钟、清晰度 ≥ 720P、原创声明到位、命名规范。
 
 ---
 
