@@ -1605,8 +1605,8 @@ class SobelUniverse(ThreeDScene):
         )
         
         # 相同标签
-        same_label_fx = MathTex(
-            "\\text{相同}",
+        same_label_fx = Text(
+            "相同",
             font_size=24,  # 【审美优化】增加到24pt，确保可读性
             color=COLOR_DIFF
         ).next_to(arrow_fx, LEFT, buff=0.3)  # 【审美优化】增加间距
@@ -1783,11 +1783,14 @@ class SobelUniverse(ThreeDScene):
         error_explanation = VGroup()
         
         # 误差公式
-        error_formula = MathTex(
-            "\\text{误差} = O(\\Delta x^2)",
-            font_size=32,
-            color=GREY_C  # 【审美优化】使用灰色，表示次要信息
-        ).move_to(ORIGIN + UP * 1)
+        # 创建中文标签
+        error_label = Text("误差", font_size=32, color=GREY_C)
+        # 创建数学公式部分
+        error_math = MathTex("= O(\\Delta x^2)", font_size=32, color=GREY_C)
+
+        # 组合在一起
+        error_formula = VGroup(error_label, error_math).arrange(RIGHT, buff=0.2)
+        error_formula.move_to(ORIGIN + UP * 1)
         
         error_text = Text(
             "高阶项被忽略，误差为二次项",
@@ -3682,14 +3685,21 @@ class SobelUniverse(ThreeDScene):
         # ====================================================================
         # Part 4: 结尾升华（约20秒）
         # ====================================================================
-        
         # 核心思想文本
-        philosophy_text = Text(
-            "知行合一\n从数学理想 到 工程现实",
-            font_size=36,
-            color=WHITE,
-            font="SimHei" if "SimHei" in Text.get_font_list() else None
-        )
+        try:
+            philosophy_text = Text(
+                "知行合一\n从数学理想 到 工程现实",
+                font_size=36,
+                color=WHITE,
+                font="SimHei"
+            )
+        except:
+            # Fallback if SimHei causes an issue (though usually it just warns)
+            philosophy_text = Text(
+                "知行合一\n从数学理想 到 工程现实",
+                font_size=36,
+                color=WHITE
+            )
         philosophy_text.move_to(ORIGIN)  # 【避免重叠】居中，字幕在底部
         
         # 【审美优化】文字逐字显示

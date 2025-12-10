@@ -2,7 +2,7 @@
 /media/
 /images/
 
-/final_version/media/
+/全流程代码/media/
 # Python cache
 __pycache__/
 *.py[cod]
