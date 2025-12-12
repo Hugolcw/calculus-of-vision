@@ -2011,3 +2011,52 @@ class Scene5Outro(Scene):
 # manim -pql sobel_v12_full.py Scene5Outro
 if __name__ == "__main__":
     pass
+
+# =============================================================================
+# 总装配类：按顺序调用所有场景
+# =============================================================================
+class FullSobelVideo(Scene):
+    def construct(self):
+        # 0. 开场
+        Scene0Intro.construct(self)
+        
+        # 1. 连续→离散
+        Scene1Discrete.construct(self)
+        
+        # 1.5 极限困境 (P0)
+        Scene1_5Limits.construct(self)
+        
+        # 2. 泰勒抵消
+        Scene2Taylor.construct(self)
+        self.clear()
+        
+        # 2.5 差分对比 (P0)
+        Scene2_5Comparison.construct(self)
+        self.clear()
+        
+        # 3. Sobel 诞生
+        Scene3SobelConstruct.construct(self)
+        self.clear()
+        
+        # 3.5 卷积可视化 (P0)
+        Scene3_5Convolution.construct(self)
+        self.clear()
+        
+        # 4. 3D 扫描
+        Scene4Vision.construct(self)
+        self.clear()
+        
+        # 4.2 多尺度 (P2)
+        Scene4_2MultiScale.construct(self)
+        self.clear()
+        
+        # 4.6 真实处理 (P1)
+        Scene4_6RealImage.construct(self)
+        self.clear()
+        
+        # 4.5 应用对照
+        Scene4_5Applications.construct(self)
+        self.clear()
+
+        # 5. 总结片尾
+        Scene5Outro.construct(self)
