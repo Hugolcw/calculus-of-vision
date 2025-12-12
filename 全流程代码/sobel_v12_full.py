@@ -40,7 +40,7 @@ class Scene0Intro(Scene):
         clean.scale(0.9)
         clean.move_to(ORIGIN)
         
-        title_clean = Tex(r"\text{清晰图}", font_size=26, color=WHITE).next_to(clean, DOWN, buff=0.25)
+        title_clean = safer_text("清晰图", font_size=26, color=WHITE).next_to(clean, DOWN, buff=0.25)
         clean_group = VGroup(clean, title_clean)
 
         self.play(FadeIn(clean_group, shift=UP * 0.3), run_time=1.2)
@@ -57,7 +57,7 @@ class Scene0Intro(Scene):
         noisy_card = self._make_noisy_card_frame()
         noisy_card.scale(0.9)
         noisy_card.move_to(ORIGIN)
-        title_noisy = Tex(r"\text{噪声图}", font_size=26, color=WHITE).next_to(noisy_card, DOWN, buff=0.25)
+        title_noisy = safer_text("噪声图", font_size=26, color=WHITE).next_to(noisy_card, DOWN, buff=0.25)
         noisy_group = VGroup(noisy_card, title_noisy)
         
         # 与清晰图同位置叠放噪声框架（不立刻移除清晰图，作为“被污染”的背景）
@@ -177,9 +177,9 @@ class Scene0Intro(Scene):
         edge_final = edge_result.copy()
         edge_final_highlight = edge_result_highlight.copy()
         pair = VGroup(clean_final, noisy_final, edge_final).arrange(RIGHT, buff=1.0).scale(0.9)
-        title_clean_final = Tex(r"\text{清晰图}", font_size=26, color=WHITE).next_to(clean_final, DOWN, buff=0.25)
-        title_noisy_final = Tex(r"\text{噪声图}", font_size=26, color=WHITE).next_to(noisy_final, DOWN, buff=0.25)
-        title_edge_final = Tex(r"\text{提取的边缘}", font_size=26, color=COLOR_DIFF).next_to(edge_final, DOWN, buff=0.25)
+        title_clean_final = safer_text("清晰图", font_size=26, color=WHITE).next_to(clean_final, DOWN, buff=0.25)
+        title_noisy_final = safer_text("噪声图", font_size=26, color=WHITE).next_to(noisy_final, DOWN, buff=0.25)
+        title_edge_final = safer_text("提取的边缘", font_size=26, color=COLOR_DIFF).next_to(edge_final, DOWN, buff=0.25)
         pair_group = VGroup(pair, title_clean_final, title_noisy_final, title_edge_final, edge_final_highlight)
         
         # 替换当前画面，保留噪声与边缘结果用于对比
@@ -194,7 +194,7 @@ class Scene0Intro(Scene):
         # Part 5: 悬念过渡（+2.9s）- V12 扩充内容
         # ====================================================================
         # 居中问题文本（定格有画面承载）
-        question = Tex(r"\text{数学能让机器看见吗？}", font_size=34, color=YELLOW_C)
+        question = safer_text("数学能让机器看见吗？", font_size=34, color=YELLOW_C)
         question_bg = BackgroundRectangle(
             question,
             fill_opacity=0.7,
@@ -671,7 +671,7 @@ class Scene1Discrete(Scene):
         hud.show("只能做割线估计，无法逼近真正的切线。", wait_after=1.0)
 
         # 放大特写 + 提问
-        question = Tex(r"\text{如何在离散像素里找回导数？}", font_size=30, color=YELLOW_C)
+        question = safer_text("如何在离散像素里找回导数？", font_size=30, color=YELLOW_C)
         q_bg = BackgroundRectangle(question, fill_opacity=0.7, color=BLACK, buff=0.25, corner_radius=0.08)
         q_group = VGroup(q_bg, question)
         q_group.arrange(DOWN, buff=0.0, aligned_edge=ORIGIN).to_edge(UP, buff=0.6)
@@ -767,10 +767,16 @@ class Scene1_5Limits(Scene):
         # 连续 vs 离散对比卡片
         continuous_card = RoundedRectangle(width=4.2, height=2.2, corner_radius=0.15, stroke_width=2.2, stroke_color=GREY_B)
         discrete_card = continuous_card.copy()
-        cont_text = Tex(r"\text{连续世界：}\ \Delta x \to 0", font_size=26, color=COLOR_CONTINUOUS).move_to(continuous_card.get_center())
-        disc_text = Tex(r"\text{离散世界：}\ \Delta x = 1", font_size=26, color=COLOR_DISCRETE).move_to(discrete_card.get_center())
-        cont_group = VGroup(continuous_card, cont_text)
-        disc_group = VGroup(discrete_card, disc_text)
+        cont_label = VGroup(
+            safer_text("连续世界：", font_size=26, color=COLOR_CONTINUOUS),
+            MathTex(r"\Delta x \to 0", font_size=26, color=COLOR_CONTINUOUS),
+        ).arrange(RIGHT, buff=0.18).move_to(continuous_card.get_center())
+        disc_label = VGroup(
+            safer_text("离散世界：", font_size=26, color=COLOR_DISCRETE),
+            MathTex(r"\Delta x = 1", font_size=26, color=COLOR_DISCRETE),
+        ).arrange(RIGHT, buff=0.18).move_to(discrete_card.get_center())
+        cont_group = VGroup(continuous_card, cont_label)
+        disc_group = VGroup(discrete_card, disc_label)
         pair = VGroup(cont_group, disc_group).arrange(RIGHT, buff=0.6).to_edge(DOWN, buff=0.7)
         self.play(FadeIn(pair, shift=UP * 0.2), run_time=1.0)
         self.wait(1.4)
@@ -1023,9 +1029,9 @@ class Scene2_5Comparison(Scene):
         axes_group = VGroup(axes_forward, axes_backward, axes_center).arrange(RIGHT, buff=0.7).to_edge(UP, buff=0.6)
 
         labels = VGroup(
-            Tex(r"\text{前向差分}", font_size=24, color=COLOR_DIFF),
-            Tex(r"\text{后向差分}", font_size=24, color=COLOR_DIFF),
-            Tex(r"\text{中心差分}", font_size=24, color=COLOR_DIFF),
+            safer_text("前向差分", font_size=24, color=COLOR_DIFF),
+            safer_text("后向差分", font_size=24, color=COLOR_DIFF),
+            safer_text("中心差分", font_size=24, color=COLOR_DIFF),
         )
         labels.arrange(RIGHT, buff=2.5).next_to(axes_group, UP, buff=0.25)
 
@@ -1078,8 +1084,8 @@ class Scene2_5Comparison(Scene):
         heatmap = VGroup(bars_fwd, bars_bwd, bars_cen).arrange(DOWN, buff=0.3).to_edge(DOWN, buff=0.9)
 
         heat_labels = VGroup(
-            Tex(r"\text{误差强度（示意）}", font_size=24, color=WHITE).next_to(heatmap, UP, buff=0.25),
-            Tex(r"\text{红 = 误差大，蓝绿 = 误差小}", font_size=20, color=GREY_B).next_to(heatmap, DOWN, buff=0.2),
+            safer_text("误差强度（示意）", font_size=24, color=WHITE).next_to(heatmap, UP, buff=0.25),
+            safer_text("红 = 误差大，蓝绿 = 误差小", font_size=20, color=GREY_B).next_to(heatmap, DOWN, buff=0.2),
         )
 
         self.play(FadeIn(VGroup(heatmap, heat_labels), shift=UP * 0.2), run_time=1.0)
@@ -1099,9 +1105,9 @@ class Scene2_5Comparison(Scene):
         bwd_graph = axes_real.plot(lambda x: (f(x) - f(x - dx)) / dx, x_range=[1, 7], color=COLOR_DIFF, stroke_width=2.5, stroke_opacity=0.65)
         cen_graph = axes_real.plot(lambda x: (f(x + dx) - f(x - dx)) / (2 * dx), x_range=[1, 7], color=COLOR_SMOOTH, stroke_width=3.2)
         legend = VGroup(
-            Tex(r"\text{前向}", font_size=20, color=COLOR_DISCRETE),
-            Tex(r"\text{后向}", font_size=20, color=COLOR_DIFF),
-            Tex(r"\text{中心}", font_size=20, color=COLOR_SMOOTH),
+            safer_text("前向", font_size=20, color=COLOR_DISCRETE),
+            safer_text("后向", font_size=20, color=COLOR_DIFF),
+            safer_text("中心", font_size=20, color=COLOR_SMOOTH),
         ).arrange(RIGHT, buff=0.6).next_to(axes_real, UP, buff=0.2)
 
         self.play(Create(axes_real), FadeIn(legend, shift=UP * 0.1), run_time=1.0)
@@ -1161,7 +1167,7 @@ class Scene3SobelConstruct(Scene):
 
         diff_kernel = Matrix([[-1, 0, 1]], bracket_h_buff=0.2, bracket_v_buff=0.2)
         diff_kernel.set_color(COLOR_DIFF).scale(0.9)
-        diff_label = Tex(r"\text{微分核}", font_size=22, color=COLOR_DIFF).next_to(diff_kernel, DOWN, buff=0.2)
+        diff_label = safer_text("微分核", font_size=22, color=COLOR_DIFF).next_to(diff_kernel, DOWN, buff=0.2)
         diff_group = VGroup(diff_kernel, diff_label).to_edge(UP, buff=0.7).shift(RIGHT * 3)
 
         self.play(FadeIn(diff_group, shift=UP * 0.2), run_time=0.8)
@@ -1189,7 +1195,7 @@ class Scene3SobelConstruct(Scene):
 
         smooth_kernel = Matrix([[1], [2], [1]], bracket_h_buff=0.2, bracket_v_buff=0.2)
         smooth_kernel.set_color(COLOR_SMOOTH).scale(0.9)
-        smooth_label = Tex(r"\text{平滑核}", font_size=22, color=COLOR_SMOOTH).next_to(smooth_kernel, RIGHT, buff=0.25)
+        smooth_label = safer_text("平滑核", font_size=22, color=COLOR_SMOOTH).next_to(smooth_kernel, RIGHT, buff=0.25)
         smooth_group = VGroup(smooth_kernel, smooth_label).next_to(diff_group, DOWN, buff=0.6)
 
         self.play(FadeIn(smooth_group, shift=DOWN * 0.2), run_time=0.8)
@@ -1346,7 +1352,7 @@ class Scene3_5Convolution(Scene):
         # Sobel 核
         sobel_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
         kernel_matrix = IntegerMatrix(sobel_kernel.tolist()).set_color_by_gradient(COLOR_DIFF, GOLD_C, COLOR_SMOOTH).scale(0.7)
-        kernel_label = Tex(r"\text{Sobel 核}", font_size=24, color=COLOR_DIFF).next_to(kernel_matrix, DOWN, buff=0.2)
+        kernel_label = safer_text("Sobel 核", font_size=24, color=COLOR_DIFF).next_to(kernel_matrix, DOWN, buff=0.2)
         kernel_group = VGroup(kernel_matrix, kernel_label).next_to(image_full, RIGHT, buff=0.9)
 
         # 结果矩阵占位
@@ -1358,7 +1364,7 @@ class Scene3_5Convolution(Scene):
                 result_group.add(sq)
         result_box = SurroundingRectangle(result_group, color=GREY_B, stroke_width=2)
         result_full = VGroup(result_box, result_group).to_edge(RIGHT, buff=0.8)
-        result_label = Tex(r"\text{卷积结果}", font_size=24, color=COLOR_SMOOTH).next_to(result_full, UP, buff=0.25)
+        result_label = safer_text("卷积结果", font_size=24, color=COLOR_SMOOTH).next_to(result_full, UP, buff=0.25)
 
         self.play(
             FadeIn(image_full, shift=UP * 0.2),
@@ -1512,7 +1518,7 @@ class Scene4_2MultiScale(Scene):
             results.append(VGroup(res_img, label))
 
         grid = VGroup(
-            VGroup(raw_img, Tex(r"\text{原图}", font_size=22, color=WHITE).next_to(raw_img, DOWN, buff=0.2)),
+            VGroup(raw_img, safer_text("原图", font_size=22, color=WHITE).next_to(raw_img, DOWN, buff=0.2)),
             *results
         ).arrange(RIGHT, buff=0.6).scale(0.95).move_to(ORIGIN)
 
@@ -1523,7 +1529,7 @@ class Scene4_2MultiScale(Scene):
 
         fused_vals = 0.4 * convolve(img_vals, kernels["3×3"]) + 0.35 * convolve(img_vals, kernels["5×5"]) + 0.25 * convolve(img_vals, kernels["7×7"])
         fused_img = make_image(fused_vals)
-        fused_label = Tex(r"\text{多尺度融合}", font_size=24, color=COLOR_SMOOTH).next_to(fused_img, DOWN, buff=0.2)
+        fused_label = safer_text("多尺度融合", font_size=24, color=COLOR_SMOOTH).next_to(fused_img, DOWN, buff=0.2)
         fused_group = VGroup(fused_img, fused_label).to_edge(DOWN, buff=0.6)
 
         self.play(FadeIn(fused_group, shift=UP * 0.2), run_time=1.0)
@@ -1737,14 +1743,14 @@ class Scene4_6RealImage(Scene):
 
         # 布局：原图/灰度/SobelX/Y/幅值/阈值 六格
         row1 = VGroup(
-            VGroup(raw_img, Tex(r"\text{原图}", font_size=20, color=WHITE).next_to(raw_img, DOWN, buff=0.15)),
-            VGroup(gray_img, Tex(r"\text{灰度}", font_size=20, color=WHITE).next_to(gray_img, DOWN, buff=0.15)),
-            VGroup(gx_img, Tex(r"\text{Sobel X}", font_size=20, color=COLOR_DIFF).next_to(gx_img, DOWN, buff=0.15))
+            VGroup(raw_img, safer_text("原图", font_size=20, color=WHITE).next_to(raw_img, DOWN, buff=0.15)),
+            VGroup(gray_img, safer_text("灰度", font_size=20, color=WHITE).next_to(gray_img, DOWN, buff=0.15)),
+            VGroup(gx_img, safer_text("Sobel X", font_size=20, color=COLOR_DIFF).next_to(gx_img, DOWN, buff=0.15))
         ).arrange(RIGHT, buff=0.5)
         row2 = VGroup(
-            VGroup(gy_img, Tex(r"\text{Sobel Y}", font_size=20, color=COLOR_DIFF).next_to(gy_img, DOWN, buff=0.15)),
-            VGroup(mag_img, Tex(r"\text{|G|}", font_size=20, color=COLOR_SMOOTH).next_to(mag_img, DOWN, buff=0.15)),
-            VGroup(edge_img, Tex(r"\text{阈值边缘}", font_size=20, color=YELLOW_C).next_to(edge_img, DOWN, buff=0.15))
+            VGroup(gy_img, safer_text("Sobel Y", font_size=20, color=COLOR_DIFF).next_to(gy_img, DOWN, buff=0.15)),
+            VGroup(mag_img, safer_text("|G|", font_size=20, color=COLOR_SMOOTH).next_to(mag_img, DOWN, buff=0.15)),
+            VGroup(edge_img, safer_text("阈值边缘", font_size=20, color=YELLOW_C).next_to(edge_img, DOWN, buff=0.15))
         ).arrange(RIGHT, buff=0.5)
         grid = VGroup(row1, row2).arrange(DOWN, buff=0.6).scale(0.9).move_to(ORIGIN)
 
@@ -1796,7 +1802,7 @@ class Scene4_5Applications(Scene):
         # 阈值/对比度影响示意（建筑例子三档阈值）
         thresh_triplet = self._make_threshold_triplet()
         thresh_triplet.to_edge(DOWN, buff=0.4)
-        thresh_title = safer_text("阈值影响：低/中/高", font_size=24, color=WHITE).next_to(thresh_triplet, UP, buff=0.25)
+         thresh_title = safer_text("阈值影响：低/中/高", font_size=24, color=WHITE).next_to(thresh_triplet, UP, buff=0.25)
         self.play(FadeIn(VGroup(thresh_triplet, thresh_title), shift=UP * 0.2), run_time=1.0)
         self.wait(1.4)
 
@@ -1822,7 +1828,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-        raw_label = safer_text("道路原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+         raw_label = safer_text("道路原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1841,7 +1847,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-        edge_label = safer_text("道路边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+         edge_label = safer_text("道路边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
 
         return raw_all, edge_all
@@ -1861,7 +1867,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-        raw_label = safer_text("文字原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+         raw_label = safer_text("文字原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1884,7 +1890,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-        edge_label = safer_text("文字边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+         edge_label = safer_text("文字边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
 
         return raw_all, edge_all
@@ -1911,7 +1917,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-        raw_label = safer_text("人脸原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+         raw_label = safer_text("人脸原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1930,7 +1936,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-        edge_label = safer_text("人脸边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+         edge_label = safer_text("人脸边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
         return raw_all, edge_all
 
@@ -1957,7 +1963,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-        raw_label = safer_text("建筑原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+         raw_label = safer_text("建筑原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1977,7 +1983,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-        edge_label = safer_text("建筑边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+         edge_label = safer_text("建筑边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
         # 额外返回 intensities 供阈值演示
         edge_all.intensities = intensities
@@ -2013,7 +2019,7 @@ class Scene4_5Applications(Scene):
                     edge.add(sq)
             edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=1.8)
             edge_group = VGroup(edge_box, edge)
-            edge_label = safer_text(name, font_size=18, color=WHITE).next_to(edge_group, DOWN, buff=0.2)
+             edge_label = safer_text(name, font_size=18, color=WHITE).next_to(edge_group, DOWN, buff=0.2)
             triplets.add(VGroup(edge_group, edge_label).arrange(DOWN, buff=0.15))
         triplets.arrange(RIGHT, buff=0.5)
         return triplets
@@ -2043,7 +2049,7 @@ class Scene5Outro(Scene):
         hud.show("知行合一：数学理想 Δx→0，工程现实 pixel=1。", wait_after=2.0)
         self.wait(2.0)
 
-        philosophy = Tex(r"\text{让机器在嘈杂世界里，找到最清晰的边界。}", font_size=32, color=YELLOW_C)
+        philosophy = safer_text("让机器在嘈杂世界里，找到最清晰的边界。", font_size=32, color=YELLOW_C)
         phil_bg = BackgroundRectangle(philosophy, fill_opacity=0.7, color=BLACK, buff=0.3, corner_radius=0.08)
         phil_group = VGroup(phil_bg, philosophy).move_to(ORIGIN)
         self.play(
@@ -2057,10 +2063,10 @@ class Scene5Outro(Scene):
         self.wait(3.0)
 
         credits = VGroup(
-            Tex(r"\text{Project Sobel}", font_size=30, color=COLOR_CONTINUOUS),
-            Tex(r"\text{Visuals: Manim Community Edition}", font_size=20, color=GREY_B),
-            Tex(r"\text{Code: Python 3.10 + Manim}", font_size=20, color=GREY_B),
-            Tex(r"\text{原创声明：本视频所有动画均为编程生成，素材来源已在文档列出。}", font_size=22, color=WHITE),
+            safer_text("Project Sobel", font_size=30, color=COLOR_CONTINUOUS),
+            safer_text("Visuals: Manim Community Edition", font_size=20, color=GREY_B),
+            safer_text("Code: Python 3.10 + Manim", font_size=20, color=GREY_B),
+            safer_text("原创声明：本视频所有动画均为编程生成，素材来源已在文档列出。", font_size=22, color=WHITE),
         ).arrange(DOWN, buff=0.35, aligned_edge=LEFT).to_edge(DOWN, buff=1.0).shift(RIGHT * 0.5)
         self.play(LaggedStart(*[FadeIn(line, shift=UP * 0.2) for line in credits], lag_ratio=0.2, run_time=2.2))
         self.wait(4.0)
