@@ -420,6 +420,75 @@ if __name__ == "__main__":
 
 
 # =============================================================================
+# Full video wrapper：串联各分场景（便于一次渲染）
+# =============================================================================
+class FullSobelVideo(Scene):
+    """
+    一次性串联全部分场景。
+    由于各分场景内部用到的私有 helper 方法定义在各类中，
+    这里提供轻量包装器把相关 helper 委托回对应类，避免 AttributeError。
+    """
+
+    # --- helper proxies for Scene0Intro ---
+    def _make_gradient_card(self):
+        return Scene0Intro._make_gradient_card(self)
+
+    def _make_noisy_card_frame(self):
+        return Scene0Intro._make_noisy_card_frame(self)
+
+    def _make_noisy_card(self):
+        return Scene0Intro._make_noisy_card(self)
+
+    def _create_edge_preview_from_gradient(self, *args, **kwargs):
+        return Scene0Intro._create_edge_preview_from_gradient(self, *args, **kwargs)
+
+    def _create_thinking_particles(self, *args, **kwargs):
+        return Scene0Intro._create_thinking_particles(self, *args, **kwargs)
+
+    # --- helper proxies for Scene4_5Applications ---
+    def _make_road_pair(self):
+        return Scene4_5Applications._make_road_pair(self)
+
+    def _make_text_pair(self):
+        return Scene4_5Applications._make_text_pair(self)
+
+    def _make_face_pair(self):
+        return Scene4_5Applications._make_face_pair(self)
+
+    def _make_building_pair(self):
+        return Scene4_5Applications._make_building_pair(self)
+
+    def _make_threshold_triplet(self):
+        return Scene4_5Applications._make_threshold_triplet(self)
+
+    def construct(self):
+        # 0. 开场
+        Scene0Intro.construct(self)
+        # 1. 连续→离散
+        Scene1Discrete.construct(self)
+        # 1.5 极限困境
+        Scene1_5Limits.construct(self)
+        # 2. 泰勒抵消
+        Scene2Taylor.construct(self)
+        # 2.5 差分对比
+        Scene2_5Comparison.construct(self)
+        # 3. Sobel 诞生
+        Scene3SobelConstruct.construct(self)
+        # 3.5 卷积可视化
+        Scene3_5Convolution.construct(self)
+        # 4.2 多尺度对比
+        Scene4_2MultiScale.construct(self)
+        # 4. 3D 扫描
+        Scene4Vision.construct(self)
+        # 4.6 真实图像流程
+        Scene4_6RealImage.construct(self)
+        # 4.5 应用对照
+        Scene4_5Applications.construct(self)
+        # 5. 收尾
+        Scene5Outro.construct(self)
+
+
+# =============================================================================
 # Scene 1：连续→离散（V12 扩充版）
 # =============================================================================
 class Scene1Discrete(Scene):
@@ -2011,52 +2080,3 @@ class Scene5Outro(Scene):
 # manim -pql sobel_v12_full.py Scene5Outro
 if __name__ == "__main__":
     pass
-
-# =============================================================================
-# 总装配类：按顺序调用所有场景
-# =============================================================================
-class FullSobelVideo(Scene):
-    def construct(self):
-        # 0. 开场
-        Scene0Intro.construct(self)
-        
-        # 1. 连续→离散
-        Scene1Discrete.construct(self)
-        
-        # 1.5 极限困境 (P0)
-        Scene1_5Limits.construct(self)
-        
-        # 2. 泰勒抵消
-        Scene2Taylor.construct(self)
-        self.clear()
-        
-        # 2.5 差分对比 (P0)
-        Scene2_5Comparison.construct(self)
-        self.clear()
-        
-        # 3. Sobel 诞生
-        Scene3SobelConstruct.construct(self)
-        self.clear()
-        
-        # 3.5 卷积可视化 (P0)
-        Scene3_5Convolution.construct(self)
-        self.clear()
-        
-        # 4. 3D 扫描
-        Scene4Vision.construct(self)
-        self.clear()
-        
-        # 4.2 多尺度 (P2)
-        Scene4_2MultiScale.construct(self)
-        self.clear()
-        
-        # 4.6 真实处理 (P1)
-        Scene4_6RealImage.construct(self)
-        self.clear()
-        
-        # 4.5 应用对照
-        Scene4_5Applications.construct(self)
-        self.clear()
-
-        # 5. 总结片尾
-        Scene5Outro.construct(self)
