@@ -422,7 +422,7 @@ if __name__ == "__main__":
 # =============================================================================
 # Full video wrapper：串联各分场景（便于一次渲染）
 # =============================================================================
-class FullSobelVideo(Scene):
+class FullSobelVideo(ThreeDScene):
     """
     一次性串联全部分场景。
     由于各分场景内部用到的私有 helper 方法定义在各类中，
@@ -662,7 +662,7 @@ class Scene1Discrete(Scene):
         p_right = axes.c2p(x_right, f(x_right))
         secant = Line(p_left, p_right, color=COLOR_DIFF, stroke_width=3.2)
         secant_label = MathTex(
-            rf"\frac{{\Delta y}}{{\Delta x}} \approx { (f(x_right)-f(x_left))/(x_right-x_left):.2f }",
+            rf"\frac{{\Delta y}}{{\Delta x}} \approx { (f(x_right)-f(x_left))/(x_right-x_left):.2f}",
             font_size=28, color=COLOR_DIFF
         )
         secant_label_bg = BackgroundRectangle(secant_label, fill_opacity=0.7, color=BLACK, buff=0.2, corner_radius=0.08)
@@ -1802,7 +1802,7 @@ class Scene4_5Applications(Scene):
         # 阈值/对比度影响示意（建筑例子三档阈值）
         thresh_triplet = self._make_threshold_triplet()
         thresh_triplet.to_edge(DOWN, buff=0.4)
-         thresh_title = safer_text("阈值影响：低/中/高", font_size=24, color=WHITE).next_to(thresh_triplet, UP, buff=0.25)
+        thresh_title = safer_text("阈值影响：低/中/高", font_size=24, color=WHITE).next_to(thresh_triplet, UP, buff=0.25)
         self.play(FadeIn(VGroup(thresh_triplet, thresh_title), shift=UP * 0.2), run_time=1.0)
         self.wait(1.4)
 
@@ -1828,7 +1828,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-         raw_label = safer_text("道路原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+        raw_label = safer_text("道路原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1847,7 +1847,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-         edge_label = safer_text("道路边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+        edge_label = safer_text("道路边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
 
         return raw_all, edge_all
@@ -1890,7 +1890,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-         edge_label = safer_text("文字边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+        edge_label = safer_text("文字边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
 
         return raw_all, edge_all
@@ -1917,7 +1917,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-         raw_label = safer_text("人脸原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+        raw_label = safer_text("人脸原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1936,7 +1936,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-         edge_label = safer_text("人脸边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+        edge_label = safer_text("人脸边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
         return raw_all, edge_all
 
@@ -1963,7 +1963,7 @@ class Scene4_5Applications(Scene):
                 raw.add(sq)
         raw_box = SurroundingRectangle(raw, color=GREY_B, stroke_width=2)
         raw_group = VGroup(raw_box, raw)
-         raw_label = safer_text("建筑原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
+        raw_label = safer_text("建筑原图", font_size=20).next_to(raw_group, DOWN, buff=0.25)
         raw_all = VGroup(raw_group, raw_label).arrange(DOWN, buff=0.2)
 
         edge = VGroup()
@@ -1983,7 +1983,7 @@ class Scene4_5Applications(Scene):
                 edge.add(sq)
         edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=2)
         edge_group = VGroup(edge_box, edge)
-         edge_label = safer_text("建筑边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
+        edge_label = safer_text("建筑边缘", font_size=20).next_to(edge_group, DOWN, buff=0.25)
         edge_all = VGroup(edge_group, edge_label).arrange(DOWN, buff=0.2)
         # 额外返回 intensities 供阈值演示
         edge_all.intensities = intensities
@@ -2019,7 +2019,7 @@ class Scene4_5Applications(Scene):
                     edge.add(sq)
             edge_box = SurroundingRectangle(edge, color=GREY_B, stroke_width=1.8)
             edge_group = VGroup(edge_box, edge)
-             edge_label = safer_text(name, font_size=18, color=WHITE).next_to(edge_group, DOWN, buff=0.2)
+            edge_label = safer_text(name, font_size=18, color=WHITE).next_to(edge_group, DOWN, buff=0.2)
             triplets.add(VGroup(edge_group, edge_label).arrange(DOWN, buff=0.15))
         triplets.arrange(RIGHT, buff=0.5)
         return triplets
