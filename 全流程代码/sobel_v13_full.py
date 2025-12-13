@@ -1163,7 +1163,7 @@ class Scene2_5Comparison(BaseScene):
         def error_bar(val, max_val=1.2):
             alpha = np.clip(abs(val) / max_val, 0, 1)
             # V13: 使用语义化颜色
-            color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
+            color = interpolate_color(ManimColor(PALETTE["MATH_FUNC"]), ManimColor(PALETTE["MATH_ERROR"]), alpha)
             bar = Rectangle(width=0.25, height=1.1 * alpha, fill_opacity=0.8, fill_color=color, stroke_width=0)
             return bar
 
@@ -1199,7 +1199,8 @@ class Scene2_5Comparison(BaseScene):
             safer_text("后向", font_size=20, color=PALETTE["DIFF_BWD"]),
             safer_text("中心", font_size=20, color=PALETTE["DIFF_CTR"]),
         )
-        self.add_to_math_group(axes_real, fwd_graph, bwd_graph, cen_graph, legend, heatmap, heat_labels).arrange(RIGHT, buff=0.6).next_to(axes_real, UP, buff=0.2)
+        legend.arrange(RIGHT, buff=0.6).to_corner(UR, buff=0.2)
+        self.add_to_math_group(axes_real, fwd_graph, bwd_graph, cen_graph, legend)
 
         self.play(Create(axes_real), FadeIn(legend, shift=UP * 0.1), run_time=1.0)
         self.play(Create(fwd_graph), run_time=0.8)
@@ -1503,7 +1504,7 @@ class Scene3_5Convolution(BaseScene):
                 result_values[i, j] = conv_val
                 # V13: 使用语义化颜色
                 alpha = np.clip(abs(conv_val) / 4.0, 0, 1)
-                color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
+                color = interpolate_color(ManimColor(PALETTE["MATH_FUNC"]), ManimColor(PALETTE["MATH_ERROR"]), alpha)
 
                 cell_rect = Square(side_length=cell, stroke_width=0, fill_opacity=0.9)
                 cell_rect.set_fill(color)
@@ -1739,7 +1740,7 @@ class Scene4Vision(BaseThreeDScene):
             # V13: 使用语义化颜色
             T_min, T_max = 0.02, 0.4
             alpha = np.clip((abs(deriv) - T_min) / (T_max - T_min), 0, 1)
-            new_color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
+            new_color = interpolate_color(ManimColor(PALETTE["MATH_FUNC"]), ManimColor(PALETTE["MATH_ERROR"]), alpha)
             mob[0].set_color(new_color)
             mob[1].set_color(new_color)
 
