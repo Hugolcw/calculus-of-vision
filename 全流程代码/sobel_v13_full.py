@@ -1,14 +1,25 @@
 from manim import *
 import numpy as np
 
-# 导入 V12 统一工具模块
-from utils import (
+# 导入 V13 统一工具模块
+from utils_v13 import (
     SubtitleManager,
     safer_text,
     make_highlight_rect,
     default_axis_config,
     apply_wave_effect,
     get_quality_config,
+    PALETTE,  # V13: 语义化色彩系统
+    SAFE_RECT,  # V13: 安全区常量
+    SUBTITLE_Y,  # V13: 字幕Y坐标
+    Z_LAYERS,  # V13: Z轴分层
+    LEFT_COL, RIGHT_COL, GUTTER,  # V13: 布局网格
+    SmartBox,  # V13: 智能组件
+    FocusArrow,  # V13: 智能组件
+    NeonLine,  # V13: 智能组件
+    BaseScene,  # V13: 基类
+    BaseThreeDScene,  # V13: 3D场景基类
+    # 向后兼容：保留旧的颜色常量（映射到PALETTE）
     COLOR_CONTINUOUS,
     COLOR_DISCRETE,
     COLOR_DIFF,
@@ -18,15 +29,16 @@ from utils import (
 
 
 # =============================================================================
-# Scene 0：开场谜题（V12 扩充版）
+# Scene 0：开场谜题（V13 升级版）
 # =============================================================================
-class Scene0Intro(ThreeDScene):
+class Scene0Intro(BaseThreeDScene):
     """
     第一部分：开场谜题 + 设问
-    V12 扩充内容：
-    - 动态噪声生成过程（8s）
-    - 边缘检测预览（5s）
-    - 悬念过渡（2.9s）
+    V13 升级内容：
+    - 使用语义化色彩系统（PALETTE）
+    - 使用布局引擎（SAFE_RECT）
+    - 使用智能组件（SmartBox, FocusArrow）
+    - 生命周期管理（clear_scene）
     """
 
     def construct(self):
@@ -137,11 +149,11 @@ class Scene0Intro(ThreeDScene):
         edge_preview.set_opacity(0)  # 初始不可见
         
         # 从噪声中逐渐"提取"边缘：线条渐显、线宽渐增
-        # 修复：改用柔和琥珀色，添加生长动画，避免突兀的红色
+        # V13: 使用语义化色彩系统（PALETTE["EDGE"]）
         for line in edge_preview:
             line.set_stroke(width=0, opacity=0)
-            # 使用琥珀金色替代红色，更柔和
-            line.set_color(GOLD_C)
+            # 使用语义化边缘颜色（琥珀金）
+            line.set_color(PALETTE["EDGE"])
         self.play(
             LaggedStart(
                 *[
@@ -158,12 +170,11 @@ class Scene0Intro(ThreeDScene):
         )
         self.wait(0.6)
         
-        # 高亮边缘检测结果，突出“提取”成功
-        edge_highlight = make_highlight_rect(
+        # V13: 使用智能组件 SmartBox
+        edge_highlight = SmartBox.create(
             edge_preview,
-            color=COLOR_DIFF,
-            buff=0.2,
-            corner_radius=0.1,
+            content_type="image",
+            color=PALETTE["EDGE"],
             stroke_width=3
         )
         self.play(Create(edge_highlight), run_time=0.6)
@@ -178,20 +189,23 @@ class Scene0Intro(ThreeDScene):
         # ====================================================================
         # Part 4: 问题提出（约4秒）
         # ====================================================================
-        # 将清晰图、噪声图、边缘结果三屏并排展示，形成"污染→提取"完整对比
-        # 修复：改为非对称布局，避免超出安全区（w=13, h=7）
+        # V13: 使用布局引擎，确保在安全区内
         clean_final = self._make_gradient_card()
         noisy_final = self._make_noisy_card()
         edge_final = edge_result.copy()
         edge_final_highlight = edge_result_highlight.copy()
         # 左侧主图（清晰图+噪声图），右侧状态灯（边缘结果）
+        # 使用 SAFE_RECT 约束，确保不超出安全区
         left_pair = VGroup(clean_final, noisy_final).arrange(DOWN, buff=0.4).scale(0.75)
         right_status = VGroup(edge_final.scale(0.7), edge_final_highlight.scale(0.7))
         right_status.arrange(DOWN, buff=0.15)
         pair = VGroup(left_pair, right_status).arrange(RIGHT, buff=0.8).move_to(ORIGIN)
+        # 确保在安全区内
+        if pair.get_width() > SAFE_RECT["width"]:
+            pair.scale(SAFE_RECT["width"] / pair.get_width() * 0.95)
         title_clean_final = safer_text("清晰图", font_size=22, color=WHITE).next_to(clean_final, DOWN, buff=0.2)
         title_noisy_final = safer_text("噪声图", font_size=22, color=WHITE).next_to(noisy_final, DOWN, buff=0.2)
-        title_edge_final = safer_text("提取的边缘", font_size=22, color=GOLD_C).next_to(edge_final, DOWN, buff=0.2)
+        title_edge_final = safer_text("提取的边缘", font_size=22, color=PALETTE["EDGE"]).next_to(edge_final, DOWN, buff=0.2)
         pair_group = VGroup(pair, title_clean_final, title_noisy_final, title_edge_final)
         
         # 替换当前画面，保留噪声与边缘结果用于对比
@@ -205,8 +219,8 @@ class Scene0Intro(ThreeDScene):
         # ====================================================================
         # Part 5: 悬念过渡（+2.9s）- V12 扩充内容
         # ====================================================================
-        # 居中问题文本（定格有画面承载）
-        question = safer_text("数学能让机器看见吗？", font_size=34, color=YELLOW_C)
+        # V13: 使用语义化颜色
+        question = safer_text("数学能让机器看见吗？", font_size=34, color=PALETTE["HIGHLIGHT"])
         question_bg = BackgroundRectangle(
             question,
             fill_opacity=0.7,
@@ -220,7 +234,7 @@ class Scene0Intro(ThreeDScene):
         self.wait(0.8)
         
         # 思考视觉元素（粒子效果）
-        # 总时长约 2.9 秒（符合 V12 方案要求）
+        # V13: 使用语义化颜色
         thinking_particles = self._create_thinking_particles(question_group)
         self.play(
             LaggedStart(
@@ -246,8 +260,10 @@ class Scene0Intro(ThreeDScene):
         # ====================================================================
         # Part 6: 收尾
         # ====================================================================
+        # V13: 使用生命周期管理
+        self.add_to_math_group(pair_group)
         hud.clear()
-        self.play(FadeOut(pair_group), run_time=0.8)
+        self.clear_scene(fade_out=True, run_time=0.8)
         self.wait(0.4)
 
     def _make_gradient_card(self):
@@ -354,10 +370,11 @@ class Scene0Intro(ThreeDScene):
                 x = x0 + (j + 0.5) * dx
                 y = y0 + (grid_h - 1 - i + 0.5) * dy  # 上下翻转以匹配视觉
                 # 短竖线，代表垂直边缘
+                # V13: 使用语义化边缘颜色
                 line = Line(
                     start=np.array([x, y - dy * 0.25, 0]),
                     end=np.array([x, y + dy * 0.25, 0]),
-                    color=COLOR_DIFF,
+                    color=PALETTE["EDGE"],
                     stroke_width=2.5,
                     stroke_opacity=0.3 + 0.7 * strength,  # 强度映射到透明度
                 )
@@ -383,12 +400,12 @@ class Scene0Intro(ThreeDScene):
             offset = radius * (np.array([np.cos(angle), np.sin(angle), 0]))
             pos = center + offset
             
-            # 创建小圆点粒子，大小略有变化
+            # V13: 使用语义化颜色
             size_variation = 0.02 * np.sin(i * 0.5)  # 轻微大小变化
             particle = Dot(
                 point=pos,
                 radius=0.08 + size_variation,
-                color=YELLOW_C,
+                color=PALETTE["HIGHLIGHT"],
                 fill_opacity=0.6 + 0.2 * np.sin(i)  # 透明度变化
             )
             particles.add(particle)
@@ -404,7 +421,7 @@ class Scene0Intro(ThreeDScene):
             particle = Dot(
                 point=pos,
                 radius=0.05 + rng.uniform(0, 0.03),
-                color=YELLOW_C,
+                color=PALETTE["HIGHLIGHT"],
                 fill_opacity=rng.uniform(0.3, 0.6)
             )
             particles.add(particle)
@@ -416,8 +433,8 @@ class Scene0Intro(ThreeDScene):
             offset = 1.8 * (np.array([np.cos(angle), np.sin(angle), 0]))
             pos = center + offset
             
-            # 创建小问号
-            q_mark = MathTex("?", font_size=20, color=YELLOW_C).move_to(pos)
+            # V13: 使用语义化颜色
+            q_mark = MathTex("?", font_size=20, color=PALETTE["HIGHLIGHT"]).move_to(pos)
             question_particles.add(q_mark)
         
         particles.add(question_particles)
@@ -434,7 +451,7 @@ if __name__ == "__main__":
 # =============================================================================
 # Full video wrapper：串联各分场景（便于一次渲染）
 # =============================================================================
-class FullSobelVideo(ThreeDScene):
+class FullSobelVideo(BaseThreeDScene):
     """
     一次性串联全部分场景。
     由于各分场景内部用到的私有 helper 方法定义在各类中，
@@ -501,9 +518,9 @@ class FullSobelVideo(ThreeDScene):
 
 
 # =============================================================================
-# Scene 1：连续→离散（V12 扩充版）
+# Scene 1：连续→离散（V13 升级版）
 # =============================================================================
-class Scene1Discrete(Scene):
+class Scene1Discrete(BaseScene):
     """
     第二部分：连续→离散，失去极限，提出“如何找回导数”
     V12 扩充内容：
@@ -517,8 +534,7 @@ class Scene1Discrete(Scene):
         self.camera.background_color = BG_COLOR
         hud = SubtitleManager(self)
 
-        # 统一坐标轴样式
-        # 修复：坐标轴上移，避免底部字幕遮挡X轴刻度
+        # V13: 使用布局引擎，坐标轴上移，避免字幕遮挡
         axes_config = default_axis_config(stroke_opacity=0.9, stroke_width=2, stroke_color=GREY_B)
         axes = Axes(
             x_range=[0, 10, 1],
@@ -527,9 +543,12 @@ class Scene1Discrete(Scene):
             y_length=4.5,
             axis_config=axes_config,
             tips=False,
-        ).shift(UP * 0.5)  # 上移0.5单位，为字幕留出空间
+        ).shift(UP * 0.5)  # 为字幕留出空间（SUBTITLE_Y = -3.2）
+        self.add_to_math_group(axes)
         def f(x): return 2 + np.sin(0.5 * x) + 0.5 * np.sin(x)
-        curve = axes.plot(f, x_range=[0, 10], color=COLOR_CONTINUOUS, stroke_width=4)
+        # V13: 使用语义化颜色
+        curve = axes.plot(f, x_range=[0, 10], color=PALETTE["MATH_FUNC"], stroke_width=4)
+        self.add_to_math_group(curve)
 
         # 坐标与连续曲线
         self.play(Create(axes), run_time=1.0)
@@ -542,13 +561,14 @@ class Scene1Discrete(Scene):
         for tx in tangent_points:
             dx = 0.01
             dy = (f(tx + dx) - f(tx - dx)) / (2 * dx)
+            # V13: 使用语义化颜色
             line = Line(
                 axes.c2p(tx - 1.2, f(tx) - dy * 1.2),
                 axes.c2p(tx + 1.2, f(tx) + dy * 1.2),
-                color=COLOR_DIFF,
+                color=PALETTE["MATH_ERROR"],
                 stroke_width=3,
             )
-            dot = Dot(axes.c2p(tx, f(tx)), color=COLOR_DIFF, radius=0.08)
+            dot = Dot(axes.c2p(tx, f(tx)), color=PALETTE["MATH_ERROR"], radius=0.08)
             tangents.add(line, dot)
         self.play(LaggedStart(*[Create(t) for t in tangents], lag_ratio=0.2, run_time=1.8))
         self.wait(0.6)
@@ -559,17 +579,18 @@ class Scene1Discrete(Scene):
         def tangent():
             x = t.get_value(); dx = 0.01
             dy = (f(x + dx) - f(x - dx)) / (2 * dx)
+            # V13: 使用语义化颜色
             return Line(
                 axes.c2p(x - 1.5, f(x) - dy * 1.5),
                 axes.c2p(x + 1.5, f(x) + dy * 1.5),
-                color=COLOR_DIFF,
+                color=PALETTE["MATH_ERROR"],
                 stroke_width=3,
             )
         tan_line = always_redraw(tangent)
-        tan_dot = always_redraw(lambda: Dot(axes.c2p(t.get_value(), f(t.get_value())), color=COLOR_DIFF, radius=0.08))
+        tan_dot = always_redraw(lambda: Dot(axes.c2p(t.get_value(), f(t.get_value())), color=PALETTE["MATH_ERROR"], radius=0.08))
         slope_text = always_redraw(lambda: MathTex(
             rf"f'({t.get_value():.1f}) \approx {((f(t.get_value()+0.01)-f(t.get_value()-0.01))/0.02):.2f}",
-            font_size=28, color=COLOR_DIFF
+            font_size=28, color=PALETTE["MATH_ERROR"]
         ).to_edge(UR, buff=0.8))
 
         self.add(tan_line, tan_dot, slope_text)
@@ -585,11 +606,13 @@ class Scene1Discrete(Scene):
             stems = VGroup()
             for x in xs:
                 y = f(x)
-                stem = Line(axes.c2p(x, 0), axes.c2p(x, y), color=COLOR_DISCRETE, stroke_width=3)
-                dot = Dot(axes.c2p(x, y), color=COLOR_DISCRETE, radius=0.07)
+                # V13: 使用语义化颜色
+                stem = Line(axes.c2p(x, 0), axes.c2p(x, y), color=YELLOW_C, stroke_width=3)
+                dot = Dot(axes.c2p(x, y), color=YELLOW_C, radius=0.07)
                 stems.add(stem, dot)
             samples_group.add(stems)
-            poly = VMobject(color=COLOR_DISCRETE, stroke_width=2.5, stroke_opacity=0.9)
+            # V13: 使用语义化颜色
+            poly = VMobject(color=YELLOW_C, stroke_width=2.5, stroke_opacity=0.9)
             poly.set_points_as_corners([axes.c2p(x, f(x)) for x in xs])
             piecewise_lines.append(poly)
 
@@ -626,8 +649,9 @@ class Scene1Discrete(Scene):
                 width=abs(width),
                 height=abs(height),
                 stroke_width=1.2,
-                stroke_color=COLOR_SMOOTH,
-                fill_color=COLOR_SMOOTH,
+                # V13: 使用语义化颜色
+                stroke_color=PALETTE["MATH_FUNC"],
+                fill_color=PALETTE["MATH_FUNC"],
                 fill_opacity=0.12
             ).move_to(axes.c2p(k + 0.5, 2.5))
             pixel_bins.add(rect)
@@ -643,8 +667,8 @@ class Scene1Discrete(Scene):
         dx_labels = VGroup()
         for dx in dx_values:
             line = Line(axes.c2p(focus_x - dx, base_y), axes.c2p(focus_x + dx, base_y),
-                        color=COLOR_DIFF, stroke_width=3)
-            label = MathTex(rf"\Delta x = {dx}", font_size=26, color=COLOR_DIFF).next_to(line, DOWN, buff=0.25)
+                        color=PALETTE["MATH_ERROR"], stroke_width=3)
+            label = MathTex(rf"\Delta x = {dx}", font_size=26, color=PALETTE["MATH_ERROR"]).next_to(line, DOWN, buff=0.25)
             dx_lines.add(line); dx_labels.add(label)
         self.play(LaggedStart(*[Create(line) for line in dx_lines], lag_ratio=0.2, run_time=1.2))
         self.play(LaggedStart(*[FadeIn(lbl) for lbl in dx_labels], lag_ratio=0.2, run_time=1.0))
@@ -655,13 +679,14 @@ class Scene1Discrete(Scene):
         mid = len(xs_full) // 2
         idxs = [mid - 1, mid, mid + 1]
         dots_focus = VGroup(*[samples_group[0][2 * i + 1] for i in idxs])
-        box = make_highlight_rect(dots_focus, color=YELLOW_C, buff=0.3, corner_radius=0.12, stroke_width=3)
+        # V13: 使用智能组件 SmartBox
+        box = SmartBox.create(dots_focus, content_type="dots", color=PALETTE["HIGHLIGHT"], stroke_width=3)
         dx_line_1 = Line(
             axes.c2p(xs_full[idxs[0]], base_y - 0.3),
             axes.c2p(xs_full[idxs[2]], base_y - 0.3),
-            color=COLOR_DIFF, stroke_width=3,
+            color=PALETTE["MATH_ERROR"], stroke_width=3,
         )
-        dx_label_1 = MathTex(r"\Delta x = 1", font_size=30, color=COLOR_DIFF)
+        dx_label_1 = MathTex(r"\Delta x = 1", font_size=30, color=PALETTE["MATH_ERROR"])
         dx_label_1_bg = BackgroundRectangle(dx_label_1, fill_opacity=0.7, color=BLACK, buff=0.2, corner_radius=0.08)
         dx_label_1_group = VGroup(dx_label_1_bg, dx_label_1).next_to(dx_line_1, DOWN, buff=0.25, aligned_edge=ORIGIN)
 
@@ -673,18 +698,18 @@ class Scene1Discrete(Scene):
         p_left = axes.c2p(x_left, f(x_left))
         p_mid = axes.c2p(x_mid, f(x_mid))
         p_right = axes.c2p(x_right, f(x_right))
-        secant = Line(p_left, p_right, color=COLOR_DIFF, stroke_width=3.2)
+        secant = Line(p_left, p_right, color=PALETTE["MATH_ERROR"], stroke_width=3.2)
         secant_label = MathTex(
             rf"\frac{{\Delta y}}{{\Delta x}} \approx { (f(x_right)-f(x_left))/(x_right-x_left):.2f}",
-            font_size=28, color=COLOR_DIFF
+            font_size=28, color=PALETTE["MATH_ERROR"]
         )
         secant_label_bg = BackgroundRectangle(secant_label, fill_opacity=0.7, color=BLACK, buff=0.2, corner_radius=0.08)
         secant_label_group = VGroup(secant_label_bg, secant_label).next_to(secant, UP, buff=0.25, aligned_edge=ORIGIN)
         self.play(Create(secant), FadeIn(secant_label_group, shift=UP * 0.1), run_time=1.0)
         hud.show("只能做割线估计，无法逼近真正的切线。", wait_after=1.0)
 
-        # 放大特写 + 提问
-        question = safer_text("如何在离散像素里找回导数？", font_size=30, color=YELLOW_C)
+        # V13: 使用语义化颜色
+        question = safer_text("如何在离散像素里找回导数？", font_size=30, color=PALETTE["HIGHLIGHT"])
         q_bg = BackgroundRectangle(question, fill_opacity=0.7, color=BLACK, buff=0.25, corner_radius=0.08)
         q_group = VGroup(q_bg, question)
         q_group.arrange(DOWN, buff=0.0, aligned_edge=ORIGIN).to_edge(UP, buff=0.6)
@@ -700,17 +725,18 @@ class Scene1Discrete(Scene):
         )
         self.wait(1.6)
 
-        # 收尾
+        # V13: 使用生命周期管理
+        self.add_to_math_group(cluster, q_group)
         hud.clear()
-        self.play(FadeOut(VGroup(cluster, q_group)), run_time=1.0)
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.3)
 
 
 
 # =============================================================================
-# Scene 1.5：极限的困境（多步 Δx 试验 + 像素约束）
+# Scene 1.5：极限的困境（V13 升级版 - 单一信源驱动）
 # =============================================================================
-class Scene1_5Limits(Scene):
+class Scene1_5Limits(BaseScene):
     """
     补足 P0 扩充：展示 Δx 逐步变小的数值实验、像素网格约束、连续 vs 离散对比
     """
@@ -733,7 +759,9 @@ class Scene1_5Limits(Scene):
 
         def f(x): return 2 + np.sin(1.2 * x) + 0.6 * np.sin(0.5 * x + 0.3)
 
-        curve = axes.plot(f, x_range=[0, 4], color=COLOR_CONTINUOUS, stroke_width=4)
+        # V13: 使用语义化颜色
+        curve = axes.plot(f, x_range=[0, 4], color=PALETTE["MATH_FUNC"], stroke_width=4)
+        self.add_to_math_group(axes, curve)
         self.play(Create(axes), Create(curve), run_time=1.2)
 
         # 多个 Δx 近似斜率并排显示
@@ -745,15 +773,17 @@ class Scene1_5Limits(Scene):
             s = (f(x0 + dx) - f(x0 - dx)) / (2 * dx)
             slopes.append(s)
         
-        # 单一信源：只显示当前Δx的公式
+        # V13: 单一信源驱动（解决 #10）
         dx_tracker = ValueTracker(0)
         approx_label = always_redraw(lambda: MathTex(
             rf"\Delta x = {dx_values[int(dx_tracker.get_value())]:.3g},\; f'(x_0)\approx {slopes[int(dx_tracker.get_value())]:.2f}",
             font_size=28,
             color=WHITE
         ).to_edge(RIGHT, buff=0.8).shift(UP * 1.5))
-        self.add(approx_label)
-        x0_dot = Dot(axes.c2p(x0, f(x0)), color=COLOR_DIFF, radius=0.08)
+        self.add_to_math_group(approx_label)
+        # V13: 使用语义化颜色
+        x0_dot = Dot(axes.c2p(x0, f(x0)), color=PALETTE["MATH_ERROR"], radius=0.08)
+        self.add_to_math_group(x0_dot)
         self.play(FadeIn(x0_dot, scale=0.8), run_time=0.6)
         # 修复：逐步显示不同Δx值，避免一次性堆砌
         for i in range(len(dx_values)):
@@ -773,9 +803,10 @@ class Scene1_5Limits(Scene):
                 sq.move_to(RIGHT * (j - grid_cols / 2) * 0.35 + UP * (grid_rows / 2 - i) * 0.35 + RIGHT * 3.2)
                 grid.add(sq)
         min_cell = grid[(grid_rows // 2) * grid_cols + grid_cols // 2].copy()
-        min_cell.set_fill(COLOR_DISCRETE, opacity=0.35).set_stroke(COLOR_DISCRETE, width=2.2)
-        # 使用 Text/safer_text 渲染中文，避免 MathTex 的 Unicode/字体问题
-        min_label = safer_text("最小像素单位", font_size=26, color=COLOR_DISCRETE).next_to(min_cell, DOWN, buff=0.25)
+        # V13: 使用语义化颜色
+        min_cell.set_fill(YELLOW_C, opacity=0.35).set_stroke(YELLOW_C, width=2.2)
+        min_label = safer_text("最小像素单位", font_size=26, color=YELLOW_C).next_to(min_cell, DOWN, buff=0.25)
+        self.add_to_math_group(grid, min_cell, min_label)
         self.play(FadeIn(grid, lag_ratio=0.02, run_time=1.4))
         self.play(Create(min_cell), FadeIn(min_label, shift=UP * 0.1), run_time=0.9)
         self.wait(0.6)
@@ -785,49 +816,53 @@ class Scene1_5Limits(Scene):
         # 连续 vs 离散对比卡片
         continuous_card = RoundedRectangle(width=4.2, height=2.2, corner_radius=0.15, stroke_width=2.2, stroke_color=GREY_B)
         discrete_card = continuous_card.copy()
+        # V13: 使用语义化颜色
         cont_label = VGroup(
-            safer_text("连续世界：", font_size=26, color=COLOR_CONTINUOUS),
-            MathTex(r"\Delta x \to 0", font_size=26, color=COLOR_CONTINUOUS),
+            safer_text("连续世界：", font_size=26, color=PALETTE["MATH_FUNC"]),
+            MathTex(r"\Delta x \to 0", font_size=26, color=PALETTE["MATH_FUNC"]),
         ).arrange(RIGHT, buff=0.18).move_to(continuous_card.get_center())
         disc_label = VGroup(
-            safer_text("离散世界：", font_size=26, color=COLOR_DISCRETE),
-            MathTex(r"\Delta x = 1", font_size=26, color=COLOR_DISCRETE),
+            safer_text("离散世界：", font_size=26, color=YELLOW_C),
+            MathTex(r"\Delta x = 1", font_size=26, color=YELLOW_C),
         ).arrange(RIGHT, buff=0.18).move_to(discrete_card.get_center())
         cont_group = VGroup(continuous_card, cont_label)
         disc_group = VGroup(discrete_card, disc_label)
         pair = VGroup(cont_group, disc_group).arrange(RIGHT, buff=0.6).to_edge(DOWN, buff=0.7)
+        # V13: 添加到数学组（在定义之后）
+        self.add_to_math_group(pair)
         self.play(FadeIn(pair, shift=UP * 0.2), run_time=1.0)
         self.wait(1.4)
 
-        # 物理约束提示：对 Δx=0.125 打上限制符号
-        # 修复：移除黑框，改用侧边指引箭头，避免遮挡关键动画
-        pixel_limit = safer_text("像素限制", font_size=24, color=YELLOW_C)
+        # V13: 使用智能组件 FocusArrow（解决 #9）
+        pixel_limit = safer_text("像素限制", font_size=24, color=PALETTE["HIGHLIGHT"])
         pixel_limit_bg = BackgroundRectangle(pixel_limit, fill_opacity=0.5, color=BLACK, buff=0.15, corner_radius=0.06)
         pixel_limit_group = VGroup(pixel_limit_bg, pixel_limit).next_to(approx_label, DOWN, buff=0.4)
-        # 使用箭头从侧面指向，而非遮挡
-        focus_arrow = Arrow(
+        # V13: 使用智能组件 FocusArrow
+        focus_arrow = FocusArrow.create(
             pixel_limit_group.get_left() + LEFT * 0.3,
             approx_label.get_right() + RIGHT * 0.1,
-            color=YELLOW_C,
+            color=PALETTE["HIGHLIGHT"],
             stroke_width=2.5,
             buff=0.1
         )
-        cross = Cross(approx_label, stroke_color=COLOR_DIFF, stroke_width=3)
+        cross = Cross(approx_label, stroke_color=PALETTE["MATH_ERROR"], stroke_width=3)
+        self.add_to_math_group(pixel_limit_group, focus_arrow, cross)
         self.play(Create(cross), FadeIn(pixel_limit_group, shift=UP * 0.2), Create(focus_arrow), run_time=0.8)
         apply_wave_effect(self, pixel_limit_group, amplitude=0.2, run_time=0.5)
+        # V13: 添加呼吸效果（如果 FocusArrow 支持）
+        # FocusArrow.create_breathing_effect(self, focus_arrow, run_time=0.6)
 
-        hud.show("结论：需要新的方法，在像素里重建"导数"。", wait_after=1.5)
+        hud.show("结论：需要新的方法，在像素里重建导数。", wait_after=1.5)
 
-        # 修复：显式清除红叉，避免残留到下一场景
-        self.play(FadeOut(VGroup(axes, curve, x0_dot, approx_label, grid, min_cell, min_label, pair, cross, pixel_limit_group, focus_arrow)), run_time=1.0)
-        self.remove(cross)  # 确保红叉被完全移除
+        # V13: 使用生命周期管理，确保完全清除
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.4)
 
 # =============================================================================
-# Scene 2：泰勒抵消 → 中心差分
+# Scene 2：泰勒抵消 → 中心差分（V13 升级版）
 # =============================================================================
-class Scene2Taylor(Scene):
+class Scene2Taylor(BaseScene):
     """
     第三部分：泰勒抵消 → 中心差分
     采用 V12 几何化修复：先展示几何误差，再做符号飞向/爆炸，最后突出中心差分
@@ -852,8 +887,9 @@ class Scene2Taylor(Scene):
 
         def g(x): return 1 + 0.6 * x + 0.4 * x**2
 
-        # 修复：背景函数变暗，为误差线提供视觉反差
-        graph = axes.plot(g, x_range=[-0.8, 2.5], color=COLOR_CONTINUOUS, stroke_width=4, stroke_opacity=0.5)
+        # V13: 背景函数变暗，为误差线提供视觉反差
+        graph = axes.plot(g, x_range=[-0.8, 2.5], color=PALETTE["MATH_FUNC"], stroke_width=4, stroke_opacity=0.5)
+        self.add_to_math_group(axes, graph)
         self.play(Create(axes), Create(graph), run_time=1.2)
         self.wait(0.3)
 
@@ -865,11 +901,14 @@ class Scene2Taylor(Scene):
         backward_pt = axes.c2p(x0 - dx, g(x0 - dx))
         center_pt = axes.c2p(x0, y0)
 
-        forward_line = Line(center_pt, forward_pt, color=COLOR_DIFF, stroke_width=3)
-        backward_line = Line(center_pt, backward_pt, color=COLOR_DIFF, stroke_width=3)
+        # V13: 使用语义化颜色
+        forward_line = Line(center_pt, forward_pt, color=PALETTE["MATH_ERROR"], stroke_width=3)
+        backward_line = Line(center_pt, backward_pt, color=PALETTE["MATH_ERROR"], stroke_width=3)
+        self.add_to_math_group(forward_line, backward_line)
 
-        fwd_label = MathTex("f'(x)_{+}", font_size=28, color=COLOR_DIFF).next_to(forward_line, UP, buff=0.2)
-        bwd_label = MathTex("f'(x)_{-}", font_size=28, color=COLOR_DIFF).next_to(backward_line, DOWN, buff=0.2)
+        fwd_label = MathTex("f'(x)_{+}", font_size=28, color=PALETTE["MATH_ERROR"]).next_to(forward_line, UP, buff=0.2)
+        bwd_label = MathTex("f'(x)_{-}", font_size=28, color=PALETTE["MATH_ERROR"]).next_to(backward_line, DOWN, buff=0.2)
+        self.add_to_math_group(fwd_label, bwd_label)
 
         self.play(Create(forward_line), Write(fwd_label), run_time=1.0)
         self.play(Create(backward_line), Write(bwd_label), run_time=1.0)
@@ -886,38 +925,50 @@ class Scene2Taylor(Scene):
         actual_forward = g(x0 + dx)
         actual_backward = g(x0 - dx)
 
-        # f(x) 常数项误差（基准偏移）
-        # 修复：误差线加粗并使用暖色（琥珀金），增强视觉反差
-        fx_error_forward = Line(
+        # V13: 使用 NeonLine 智能组件（解决 #14）
+        fx_error_forward = NeonLine.create(
             axes.c2p(x0 + dx, y0 - 0.1),
             axes.c2p(x0 + dx, y0 + 0.1),
-            color=GOLD_C,  # 使用暖色
-            stroke_width=6.5,  # 加粗
+            color=PALETTE["MATH_ERROR"],
+            stroke_width=6.5
         )
-        fx_error_backward = Line(
+        fx_error_backward = NeonLine.create(
             axes.c2p(x0 - dx, y0 - 0.1),
             axes.c2p(x0 - dx, y0 + 0.1),
-            color=GOLD_C,  # 使用暖色
-            stroke_width=6.5,  # 加粗
+            color=PALETTE["MATH_ERROR"],
+            stroke_width=6.5
         )
 
         # f''(x) 二阶项误差（线性近似与真实值的偏差）
-        fdd_error_forward = Line(
+        fdd_error_forward = NeonLine.create(
             axes.c2p(x0 + dx, linear_approx_forward),
             axes.c2p(x0 + dx, actual_forward),
-            color=GOLD_C,  # 使用暖色
-            stroke_width=5.5,  # 加粗
+            color=PALETTE["MATH_ERROR"],
+            stroke_width=5.5
         )
-        fdd_error_backward = Line(
+        fdd_error_backward = NeonLine.create(
             axes.c2p(x0 - dx, linear_approx_backward),
             axes.c2p(x0 - dx, actual_backward),
-            color=GOLD_C,  # 使用暖色
-            stroke_width=5.5,  # 加粗
+            color=PALETTE["MATH_ERROR"],
+            stroke_width=5.5
         )
+        self.add_to_math_group(fx_error_forward, fx_error_backward, fdd_error_forward, fdd_error_backward)
 
-        self.play(Create(fx_error_forward), Create(fx_error_backward), run_time=1.0)
+        # V13: NeonLine 返回 VGroup，需要分别处理
+        fx_error_forward_group = fx_error_forward
+        fx_error_backward_group = fx_error_backward
+        fdd_error_forward_group = fdd_error_forward
+        fdd_error_backward_group = fdd_error_backward
+        
+        self.play(Create(fx_error_forward_group), Create(fx_error_backward_group), run_time=1.0)
         self.wait(0.5)
-        self.play(Create(fdd_error_forward), Create(fdd_error_backward), run_time=0.8)
+        self.play(Create(fdd_error_forward_group), Create(fdd_error_backward_group), run_time=0.8)
+        
+        # 提取实际的 Line 对象用于后续操作
+        fx_error_forward = fx_error_forward_group[1] if isinstance(fx_error_forward_group, VGroup) else fx_error_forward_group
+        fx_error_backward = fx_error_backward_group[1] if isinstance(fx_error_backward_group, VGroup) else fx_error_backward_group
+        fdd_error_forward = fdd_error_forward_group[1] if isinstance(fdd_error_forward_group, VGroup) else fdd_error_forward_group
+        fdd_error_backward = fdd_error_backward_group[1] if isinstance(fdd_error_backward_group, VGroup) else fdd_error_backward_group
         self.wait(0.4)
 
         # 泰勒展开公式
@@ -948,9 +999,11 @@ class Scene2Taylor(Scene):
         fdd_forward = right_tex.get_part_by_tex("f''(x)")
         fdd_backward = left_tex.get_part_by_tex("f''(x)")
 
-        # 高亮 f(x)
-        fx_rect1 = make_highlight_rect(fx_forward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08, stroke_width=2.5)
-        fx_rect2 = make_highlight_rect(fx_backward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08, stroke_width=2.5)
+        # V13: 使用智能组件 SmartBox
+        # V13: 使用语义化颜色
+        fx_rect1 = SmartBox.create(fx_forward, content_type="text", color=PALETTE["MATH_FUNC"], stroke_width=2.5)
+        fx_rect2 = SmartBox.create(fx_backward, content_type="text", color=PALETTE["MATH_FUNC"], stroke_width=2.5)
+        self.add_to_math_group(right_tex, left_tex, fx_rect1, fx_rect2)
         self.play(Create(fx_rect1), Create(fx_rect2), run_time=0.8)
         self.wait(0.3)
 
@@ -969,14 +1022,16 @@ class Scene2Taylor(Scene):
             rate_func=smooth
         )
 
-        error_group_fx = VGroup(fx_error_forward, fx_error_backward, fx_forward_copy, fx_backward_copy)
+        error_group_fx = VGroup(fx_error_forward_group, fx_error_backward_group, fx_forward_copy, fx_backward_copy)
         apply_wave_effect(self, error_group_fx, amplitude=0.3, run_time=0.6)
         self.play(FadeOut(error_group_fx), run_time=0.4)
         self.wait(0.5)
 
-        # 高亮 f''(x)
-        fdd_rect1 = make_highlight_rect(fdd_forward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08, stroke_width=2.5)
-        fdd_rect2 = make_highlight_rect(fdd_backward, color=COLOR_SMOOTH, buff=0.1, corner_radius=0.08, stroke_width=2.5)
+        # V13: 使用智能组件 SmartBox
+        # V13: 使用语义化颜色
+        fdd_rect1 = SmartBox.create(fdd_forward, content_type="text", color=PALETTE["MATH_FUNC"], stroke_width=2.5)
+        fdd_rect2 = SmartBox.create(fdd_backward, content_type="text", color=PALETTE["MATH_FUNC"], stroke_width=2.5)
+        self.add_to_math_group(fdd_rect1, fdd_rect2)
         self.play(Create(fdd_rect1), Create(fdd_rect2), run_time=0.8)
         self.wait(0.3)
 
@@ -994,7 +1049,7 @@ class Scene2Taylor(Scene):
             rate_func=smooth
         )
 
-        error_group_fdd = VGroup(fdd_error_forward, fdd_error_backward)
+        error_group_fdd = VGroup(fdd_error_forward_group, fdd_error_backward_group)
         apply_wave_effect(self, error_group_fdd, amplitude=0.3, run_time=0.6)
         self.play(FadeOut(error_group_fdd), FadeOut(VGroup(fdd_forward_copy, fdd_backward_copy)), run_time=0.4)
         self.wait(0.6)
@@ -1009,16 +1064,16 @@ class Scene2Taylor(Scene):
         self.play(TransformMatchingTex(VGroup(right_tex, left_tex), diff_tex), run_time=1.8)
         self.wait(0.8)
 
-        # 高亮唯一幸存的一阶导
+        # V13: 使用智能组件 SmartBox
         f_prime_part = diff_tex.get_part_by_tex("f'(x)")
-        f_prime_highlight = make_highlight_rect(
+        f_prime_highlight = SmartBox.create(
             f_prime_part,
-            color=COLOR_DIFF,
-            buff=0.15,
-            corner_radius=0.1,
+            content_type="text",
+            color=PALETTE["MATH_ERROR"],
             stroke_width=4
         )
-        coeff = MathTex(r"[-1,\;0,\;1]", font_size=36, color=YELLOW_C).next_to(diff_tex, DOWN, buff=0.5)
+        coeff = MathTex(r"[-1,\;0,\;1]", font_size=36, color=PALETTE["HIGHLIGHT"]).next_to(diff_tex, DOWN, buff=0.5)
+        self.add_to_math_group(diff_tex, coeff, f_prime_highlight)
         self.play(Write(coeff), Create(f_prime_highlight), run_time=1.2)
         self.wait(1.0)
 
@@ -1026,18 +1081,16 @@ class Scene2Taylor(Scene):
         hud.show("中心差分：用三点近似导数，误差仅剩二阶。", wait_after=1.5)
         self.wait(0.6)
 
-        self.play(FadeOut(VGroup(
-            axes, graph, forward_line, backward_line, fwd_label, bwd_label,
-            diff_tex, coeff
-        )), run_time=1.0)
+        # V13: 使用生命周期管理
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.3)
 
 
 # =============================================================================
-# Scene 2.5：差分对比（前向/后向/中心）
+# Scene 2.5：差分对比（V13 升级版 - 语义化差分颜色）
 # =============================================================================
-class Scene2_5Comparison(Scene):
+class Scene2_5Comparison(BaseScene):
     """
     P0 扩充：三种差分并排、误差可视化、真实函数对比
     """
@@ -1059,11 +1112,13 @@ class Scene2_5Comparison(Scene):
         axes_center = axes_forward.copy()
         axes_group = VGroup(axes_forward, axes_backward, axes_center).arrange(RIGHT, buff=0.7).to_edge(UP, buff=0.6)
 
+        # V13: 使用语义化差分颜色（解决 #16）
         labels = VGroup(
-            safer_text("前向差分", font_size=24, color=COLOR_DIFF),
-            safer_text("后向差分", font_size=24, color=COLOR_DIFF),
-            safer_text("中心差分", font_size=24, color=COLOR_DIFF),
+            safer_text("前向差分", font_size=24, color=PALETTE["DIFF_FWD"]),
+            safer_text("后向差分", font_size=24, color=PALETTE["DIFF_BWD"]),
+            safer_text("中心差分", font_size=24, color=PALETTE["DIFF_CTR"]),
         )
+        self.add_to_math_group(axes_group, labels)
         labels.arrange(RIGHT, buff=2.5).next_to(axes_group, UP, buff=0.25)
 
         self.play(FadeIn(VGroup(axes_group, labels), shift=UP * 0.2), run_time=1.2)
@@ -1088,9 +1143,11 @@ class Scene2_5Comparison(Scene):
                 dots.add(Dot(ax.c2p(x, y), color=color, radius=0.06))
             return dots
 
-        forward_dots = scatter(forward_points, axes_forward, COLOR_DISCRETE)
-        backward_dots = scatter(backward_points, axes_backward, COLOR_DISCRETE)
-        center_dots = scatter(center_points, axes_center, COLOR_DISCRETE)
+        # V13: 使用语义化差分颜色
+        forward_dots = scatter(forward_points, axes_forward, PALETTE["DIFF_FWD"])
+        backward_dots = scatter(backward_points, axes_backward, PALETTE["DIFF_BWD"])
+        center_dots = scatter(center_points, axes_center, PALETTE["DIFF_CTR"])
+        self.add_to_math_group(forward_dots, backward_dots, center_dots)
 
         self.play(
             FadeIn(forward_dots, lag_ratio=0.05),
@@ -1105,7 +1162,8 @@ class Scene2_5Comparison(Scene):
         # 误差热力条（示意）
         def error_bar(val, max_val=1.2):
             alpha = np.clip(abs(val) / max_val, 0, 1)
-            color = interpolate_color(COLOR_SMOOTH, COLOR_DIFF, alpha)
+            # V13: 使用语义化颜色
+            color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
             bar = Rectangle(width=0.25, height=1.1 * alpha, fill_opacity=0.8, fill_color=color, stroke_width=0)
             return bar
 
@@ -1132,14 +1190,16 @@ class Scene2_5Comparison(Scene):
             axis_config=axes_config,
             tips=False,
         ).to_edge(DOWN, buff=0.35)
-        fwd_graph = axes_real.plot(lambda x: (f(x + dx) - f(x)) / dx, x_range=[1, 7], color=COLOR_DISCRETE, stroke_width=2.5, stroke_opacity=0.8)
-        bwd_graph = axes_real.plot(lambda x: (f(x) - f(x - dx)) / dx, x_range=[1, 7], color=COLOR_DIFF, stroke_width=2.5, stroke_opacity=0.65)
-        cen_graph = axes_real.plot(lambda x: (f(x + dx) - f(x - dx)) / (2 * dx), x_range=[1, 7], color=COLOR_SMOOTH, stroke_width=3.2)
+        # V13: 使用语义化差分颜色
+        fwd_graph = axes_real.plot(lambda x: (f(x + dx) - f(x)) / dx, x_range=[1, 7], color=PALETTE["DIFF_FWD"], stroke_width=2.5, stroke_opacity=0.8)
+        bwd_graph = axes_real.plot(lambda x: (f(x) - f(x - dx)) / dx, x_range=[1, 7], color=PALETTE["DIFF_BWD"], stroke_width=2.5, stroke_opacity=0.65)
+        cen_graph = axes_real.plot(lambda x: (f(x + dx) - f(x - dx)) / (2 * dx), x_range=[1, 7], color=PALETTE["DIFF_CTR"], stroke_width=3.2)
         legend = VGroup(
-            safer_text("前向", font_size=20, color=COLOR_DISCRETE),
-            safer_text("后向", font_size=20, color=COLOR_DIFF),
-            safer_text("中心", font_size=20, color=COLOR_SMOOTH),
-        ).arrange(RIGHT, buff=0.6).next_to(axes_real, UP, buff=0.2)
+            safer_text("前向", font_size=20, color=PALETTE["DIFF_FWD"]),
+            safer_text("后向", font_size=20, color=PALETTE["DIFF_BWD"]),
+            safer_text("中心", font_size=20, color=PALETTE["DIFF_CTR"]),
+        )
+        self.add_to_math_group(axes_real, fwd_graph, bwd_graph, cen_graph, legend, heatmap, heat_labels).arrange(RIGHT, buff=0.6).next_to(axes_real, UP, buff=0.2)
 
         self.play(Create(axes_real), FadeIn(legend, shift=UP * 0.1), run_time=1.0)
         self.play(Create(fwd_graph), run_time=0.8)
@@ -1149,17 +1209,15 @@ class Scene2_5Comparison(Scene):
 
         hud.show("结论：中心差分 = 低误差、对称采样。", wait_after=1.4)
 
-        self.play(FadeOut(VGroup(
-            axes_group, labels, forward_dots, backward_dots, center_dots,
-            heatmap, heat_labels, axes_real, fwd_graph, bwd_graph, cen_graph, legend
-        )), run_time=1.2)
+        # V13: 使用生命周期管理
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.2)
         self.wait(0.4)
 
 # =============================================================================
-# Scene 3：Sobel 诞生
+# Scene 3：Sobel 诞生（V13 升级版 - 布局网格）
 # =============================================================================
-class Scene3SobelConstruct(Scene):
+class Scene3SobelConstruct(BaseScene):
     """
     第四部分：噪声→平滑→微分，Sobel 诞生
     采用 V12 局部卷积直觉修复：窗口滑动、fake_grad 放大、ApplyWave 强调
@@ -1186,8 +1244,10 @@ class Scene3SobelConstruct(Scene):
         noise = lambda x: 0.35 * rng.normal(0, 1)
         noisy = lambda x: clean(x) + noise(x)
 
-        noisy_graph = axes.plot(lambda x: noisy(x), x_range=[0, 10], color=COLOR_DISCRETE, stroke_width=3.5)
-        clean_graph = axes.plot(lambda x: clean(x), x_range=[0, 10], color=COLOR_CONTINUOUS, stroke_width=3, stroke_opacity=0.4)
+        # V13: 使用语义化颜色
+        noisy_graph = axes.plot(lambda x: noisy(x), x_range=[0, 10], color=PALETTE["MATH_ERROR"], stroke_width=3.5)
+        clean_graph = axes.plot(lambda x: clean(x), x_range=[0, 10], color=PALETTE["MATH_FUNC"], stroke_width=3, stroke_opacity=0.4)
+        self.add_to_math_group(axes, noisy_graph, clean_graph)
 
         self.play(Create(axes), run_time=0.8)
         self.play(Create(noisy_graph), run_time=1.2)
@@ -1196,10 +1256,12 @@ class Scene3SobelConstruct(Scene):
 
         hud.show("套上纯微分核 [-1,0,1]：噪声被一并放大。", wait_after=1.0)
 
+        # V13: 使用布局网格（LEFT_COL, RIGHT_COL）
         diff_kernel = Matrix([[-1, 0, 1]], bracket_h_buff=0.2, bracket_v_buff=0.2)
-        diff_kernel.set_color(COLOR_DIFF).scale(0.9)
-        diff_label = safer_text("微分核", font_size=22, color=COLOR_DIFF).next_to(diff_kernel, DOWN, buff=0.2)
-        diff_group = VGroup(diff_kernel, diff_label).to_edge(UP, buff=0.7).shift(RIGHT * 3)
+        diff_kernel.set_color(PALETTE["MATH_ERROR"]).scale(0.9)
+        diff_label = safer_text("微分核", font_size=22, color=PALETTE["MATH_ERROR"]).next_to(diff_kernel, DOWN, buff=0.2)
+        diff_group = VGroup(diff_kernel, diff_label).move_to(RIGHT_COL + UP * 1.5)
+        self.add_to_math_group(diff_group)
 
         self.play(FadeIn(diff_group, shift=UP * 0.2), run_time=0.8)
         self.wait(0.6)
@@ -1217,17 +1279,21 @@ class Scene3SobelConstruct(Scene):
 
         def fake_grad(x): return 1.5 * (noisy(x + 0.1) - noisy(x - 0.1)) / 0.2
 
-        grad_graph = diff_axes.plot(lambda x: fake_grad(x), x_range=[0, 10], color=COLOR_DIFF, stroke_width=3.5)
+        # V13: 使用语义化颜色，降低振幅避免眩晕
+        grad_graph = diff_axes.plot(lambda x: fake_grad(x), x_range=[0, 10], color=PALETTE["MATH_ERROR"], stroke_width=3.5)
+        self.add_to_math_group(diff_axes, grad_graph)
         self.play(Create(diff_axes), Create(grad_graph), run_time=1.2)
-        apply_wave_effect(self, grad_graph, amplitude=0.4, run_time=0.8)
+        apply_wave_effect(self, grad_graph, amplitude=0.15, run_time=0.8)  # V13: 降低振幅
         self.wait(0.5)
 
         hud.show("先平滑，再微分：用 [1,2,1]^T 做低通，再用 [-1,0,1] 做高通。", wait_after=1.4)
 
+        # V13: 使用布局网格
         smooth_kernel = Matrix([[1], [2], [1]], bracket_h_buff=0.2, bracket_v_buff=0.2)
-        smooth_kernel.set_color(COLOR_SMOOTH).scale(0.9)
-        smooth_label = safer_text("平滑核", font_size=22, color=COLOR_SMOOTH).next_to(smooth_kernel, RIGHT, buff=0.25)
-        smooth_group = VGroup(smooth_kernel, smooth_label).next_to(diff_group, DOWN, buff=0.6)
+        smooth_kernel.set_color(PALETTE["MATH_FUNC"]).scale(0.9)
+        smooth_label = safer_text("平滑核", font_size=22, color=PALETTE["MATH_FUNC"]).next_to(smooth_kernel, RIGHT, buff=0.25)
+        smooth_group = VGroup(smooth_kernel, smooth_label).move_to(RIGHT_COL + UP * 0.3)
+        self.add_to_math_group(smooth_group)
 
         self.play(FadeIn(smooth_group, shift=DOWN * 0.2), run_time=0.8)
         self.wait(0.4)
@@ -1255,21 +1321,23 @@ class Scene3SobelConstruct(Scene):
 
         window_tracker = ValueTracker(0.5)
 
+        # V13: 使用语义化颜色
         smoothed_graph = axes.plot(
             lambda x: smoothed_func(x, window_tracker.get_value()),
             x_range=[0, 10],
-            color=COLOR_SMOOTH,
+            color=PALETTE["MATH_FUNC"],
             stroke_width=3.5,
         )
 
         window_rect = Rectangle(
             width=1.0 * axes.x_axis.unit_size,
             height=axes.y_length,
-            stroke_color=COLOR_SMOOTH,
+            stroke_color=PALETTE["MATH_FUNC"],
             stroke_width=3,
-            fill_color=COLOR_SMOOTH,
+            fill_color=PALETTE["MATH_FUNC"],
             fill_opacity=0.15,
         )
+        self.add_to_math_group(smoothed_graph, window_rect)
 
         def update_window_rect(mob):
             window_center = window_tracker.get_value()
@@ -1283,7 +1351,7 @@ class Scene3SobelConstruct(Scene):
         target_graph = axes.plot(
             lambda x: smoothed_func(x, target_window),
             x_range=[0, 10],
-            color=COLOR_SMOOTH,
+            color=PALETTE["MATH_FUNC"],
             stroke_width=3.5,
         )
         self.play(
@@ -1309,16 +1377,18 @@ class Scene3SobelConstruct(Scene):
         equal = MathTex(r"=", font_size=44, color=WHITE)
         sobel_values = [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]
         sobel_matrix = IntegerMatrix(sobel_values, element_alignment_corner=ORIGIN).scale(0.9)
-        sobel_matrix.set_color_by_gradient(COLOR_DIFF, GOLD_C, COLOR_SMOOTH)
+        # V13: 使用语义化颜色渐变
+        sobel_matrix.set_color_by_gradient(PALETTE["MATH_ERROR"], PALETTE["HIGHLIGHT"], PALETTE["MATH_FUNC"])
 
-        # 修复：左右分栏，左侧纯图，右侧纯算式，中间留出隔离带，避免图文互挡
+        # V13: 使用布局网格（LEFT_COL, RIGHT_COL）
         eq_group = VGroup(
             smooth_kernel.copy(),
             multiply,
             diff_kernel.copy(),
             equal,
             sobel_matrix
-        ).arrange(RIGHT, buff=0.3).to_edge(RIGHT, buff=0.6).shift(UP * 0.5)  # 移到右侧，避免与图像重叠
+        ).arrange(RIGHT, buff=0.3).move_to(RIGHT_COL + UP * 0.5)
+        self.add_to_math_group(eq_group)
 
         self.play(Write(multiply), Write(equal), FadeIn(sobel_matrix, shift=RIGHT * 0.2), run_time=1.4)
         self.play(Transform(VGroup(smooth_kernel, diff_kernel), VGroup(eq_group[0], eq_group[2])), run_time=0.001)
@@ -1327,13 +1397,14 @@ class Scene3SobelConstruct(Scene):
         hud.show("Sobel = 平滑 × 微分：一手抓稳，一手抓变。", wait_after=1.4)
         self.wait(0.6)
 
-        rect = make_highlight_rect(
+        # V13: 使用智能组件 SmartBox
+        rect = SmartBox.create(
             sobel_matrix,
-            color=YELLOW_C,
-            buff=0.2,
-            corner_radius=0.12,
+            content_type="matrix",
+            color=PALETTE["HIGHLIGHT"],
             stroke_width=3
         )
+        self.add_to_math_group(rect)
         self.play(Create(rect), run_time=0.8)
         self.wait(2.0)
 
@@ -1348,7 +1419,7 @@ class Scene3SobelConstruct(Scene):
 # =============================================================================
 # Scene 3.5：卷积可视化（滑动窗口 + 结果填充）
 # =============================================================================
-class Scene3_5Convolution(Scene):
+class Scene3_5Convolution(BaseScene):
     """
     P0 扩充：8x8 小图 + Sobel 核滑动，实时显示局部卷积值并填充结果矩阵
     """
@@ -1383,8 +1454,9 @@ class Scene3_5Convolution(Scene):
 
         # Sobel 核
         sobel_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
-        kernel_matrix = IntegerMatrix(sobel_kernel.tolist()).set_color_by_gradient(COLOR_DIFF, GOLD_C, COLOR_SMOOTH).scale(0.7)
-        kernel_label = safer_text("Sobel 核", font_size=24, color=COLOR_DIFF).next_to(kernel_matrix, DOWN, buff=0.2)
+        # V13: 使用语义化颜色
+        kernel_matrix = IntegerMatrix(sobel_kernel.tolist()).set_color_by_gradient(PALETTE["MATH_ERROR"], PALETTE["HIGHLIGHT"], PALETTE["MATH_FUNC"]).scale(0.7)
+        kernel_label = safer_text("Sobel 核", font_size=24, color=PALETTE["MATH_ERROR"]).next_to(kernel_matrix, DOWN, buff=0.2)
         kernel_group = VGroup(kernel_matrix, kernel_label).next_to(image_full, RIGHT, buff=0.9)
 
         # 结果矩阵占位
@@ -1396,7 +1468,10 @@ class Scene3_5Convolution(Scene):
                 result_group.add(sq)
         result_box = SurroundingRectangle(result_group, color=GREY_B, stroke_width=2)
         result_full = VGroup(result_box, result_group).to_edge(RIGHT, buff=0.8)
-        result_label = safer_text("卷积结果", font_size=24, color=COLOR_SMOOTH).next_to(result_full, UP, buff=0.25)
+        result_label = safer_text("卷积结果", font_size=24, color=PALETTE["MATH_FUNC"]).next_to(result_full, UP, buff=0.25)
+        
+        # V13: 添加到数学组（在定义之后）
+        self.add_to_math_group(image_full, kernel_group, result_full, result_label)
 
         self.play(
             FadeIn(image_full, shift=UP * 0.2),
@@ -1409,7 +1484,9 @@ class Scene3_5Convolution(Scene):
         hud.show("窗口逐行扫描，每一步计算 G = 核 · 局部补丁。", wait_after=1.0)
 
         # 滑动窗口框
-        window = Square(side_length=cell * 3, stroke_color=COLOR_SMOOTH, stroke_width=3, fill_color=COLOR_SMOOTH, fill_opacity=0.12)
+        # V13: 使用语义化颜色
+        window = Square(side_length=cell * 3, stroke_color=PALETTE["MATH_FUNC"], stroke_width=3, fill_color=PALETTE["MATH_FUNC"], fill_opacity=0.12)
+        self.add_to_math_group(window)
 
         def window_pos(i, j):
             return RIGHT * ((j - 1) - size / 2 + 0.5) * cell + UP * ((size / 2 - i + 1) - 0.5) * cell
@@ -1424,8 +1501,9 @@ class Scene3_5Convolution(Scene):
                 patch = image_vals[i - 1:i + 2, j - 1:j + 2]
                 conv_val = float(np.sum(patch * sobel_kernel))
                 result_values[i, j] = conv_val
+                # V13: 使用语义化颜色
                 alpha = np.clip(abs(conv_val) / 4.0, 0, 1)
-                color = interpolate_color(COLOR_SMOOTH, COLOR_DIFF, alpha)
+                color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
 
                 cell_rect = Square(side_length=cell, stroke_width=0, fill_opacity=0.9)
                 cell_rect.set_fill(color)
@@ -1445,9 +1523,9 @@ class Scene3_5Convolution(Scene):
             conv_tracker.get_value(),
             num_decimal_places=2,
             font_size=26,
-            color=COLOR_DIFF
+            color=PALETTE["MATH_ERROR"]
         ).next_to(window, UP, buff=0.2))
-        self.add(readout)
+        self.add_to_math_group(readout)
 
         for step, (pos, conv_val, cell_rect) in enumerate(animations):
             conv_tracker.set_value(conv_val)
@@ -1458,16 +1536,16 @@ class Scene3_5Convolution(Scene):
         hud.show("卷积结果逐步填充：红=强边缘，蓝绿=弱。", wait_after=1.2)
         self.wait(0.6)
 
-        self.play(FadeOut(VGroup(window, readout)), run_time=0.6)
-        self.play(FadeOut(VGroup(image_full, kernel_group, result_full, result_label, fill_group)), run_time=1.0)
+        # V13: 使用生命周期管理
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.4)
 
 
 # =============================================================================
 # Scene 4.2：多尺度边缘（3x3 / 5x5 / 7x7 对比）
 # =============================================================================
-class Scene4_2MultiScale(Scene):
+class Scene4_2MultiScale(BaseScene):
     """
     多尺度 Sobel 对比：展示 3x3 / 5x5 / 7x7 核的检测差异，并做融合示意
     """
@@ -1546,7 +1624,8 @@ class Scene4_2MultiScale(Scene):
         for k in ["3×3", "5×5", "7×7"]:
             vals = convolve(img_vals, kernels[k])
             res_img = make_image(vals)
-            label = safer_text(f"Sobel {k}", font_size=22, color=COLOR_DIFF).next_to(res_img, DOWN, buff=0.2)
+            # V13: 使用语义化颜色
+            label = safer_text(f"Sobel {k}", font_size=22, color=PALETTE["MATH_ERROR"]).next_to(res_img, DOWN, buff=0.2)
             results.append(VGroup(res_img, label))
 
         grid = VGroup(
@@ -1561,22 +1640,26 @@ class Scene4_2MultiScale(Scene):
 
         fused_vals = 0.4 * convolve(img_vals, kernels["3×3"]) + 0.35 * convolve(img_vals, kernels["5×5"]) + 0.25 * convolve(img_vals, kernels["7×7"])
         fused_img = make_image(fused_vals)
-        fused_label = safer_text("多尺度融合", font_size=24, color=COLOR_SMOOTH).next_to(fused_img, DOWN, buff=0.2)
+        # V13: 使用语义化颜色
+        fused_label = safer_text("多尺度融合", font_size=24, color=PALETTE["MATH_FUNC"]).next_to(fused_img, DOWN, buff=0.2)
         fused_group = VGroup(fused_img, fused_label).to_edge(DOWN, buff=0.6)
+        # V13: 添加到数学组（在定义之后）
+        self.add_to_math_group(grid, fused_group)
 
         self.play(FadeIn(fused_group, shift=UP * 0.2), run_time=1.0)
         self.wait(1.0)
 
         hud.show("融合多尺度：既留细节，也保轮廓。", wait_after=1.2)
 
-        self.play(FadeOut(VGroup(grid, fused_group)), run_time=1.0)
+        # V13: 使用生命周期管理
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.3)
 
 # =============================================================================
 # Scene 4：3D 扫描（Sobel 在地形上滑窗）
 # =============================================================================
-class Scene4Vision(ThreeDScene):
+class Scene4Vision(BaseThreeDScene):
     """第五部分：3D 扫描，颜色随梯度大小变化"""
 
     def construct(self):
@@ -1611,12 +1694,14 @@ class Scene4Vision(ThreeDScene):
             resolution=q["surface_resolution"],
             should_make_jagged=False,
         )
+        # V13: 使用语义化颜色
         surface.set_style(
             fill_opacity=0.8,
-            stroke_color=COLOR_CONTINUOUS,
+            stroke_color=PALETTE["MATH_FUNC"],
             stroke_width=q["stroke_width"] * 0.35,
-            fill_color=COLOR_CONTINUOUS,
+            fill_color=PALETTE["MATH_FUNC"],
         )
+        self.add_to_math_group(axes3d, surface)
 
         self.set_camera_orientation(phi=60 * DEGREES, theta=-45 * DEGREES)
         self.play(FadeIn(axes3d), FadeIn(surface), run_time=2.6)
@@ -1624,12 +1709,20 @@ class Scene4Vision(ThreeDScene):
 
         hud.show("用滑动窗口扫描：窗口颜色随梯度大小而变。", wait_after=1.8)
 
+        # V13: 单一信源驱动 - 先定义 get_scan_data 函数
+        def get_scan_data(t):
+            """统一的扫描数据函数，确保扫描框和示波器数据一致"""
+            delta = 0.1
+            deriv = (height(t + delta, rows / 2) - height(t - delta, rows / 2)) / (2 * delta)
+            return deriv
+
         scan_tracker = ValueTracker(2)
         box_w, box_h = 1.4, 1.4
-        scanner = RoundedRectangle(width=box_w, height=box_h, corner_radius=0.08, stroke_width=4, stroke_color=COLOR_SMOOTH)
+        # V13: 使用语义化颜色
+        scanner = RoundedRectangle(width=box_w, height=box_h, corner_radius=0.08, stroke_width=4, stroke_color=PALETTE["MATH_FUNC"])
         scanner.rotate(PI / 2, axis=RIGHT)
 
-        laser = Line(ORIGIN, ORIGIN + DOWN * 1.2, color=COLOR_SMOOTH, stroke_width=3)
+        laser = Line(ORIGIN, ORIGIN + DOWN * 1.2, color=PALETTE["MATH_FUNC"], stroke_width=3)
         laser.rotate(PI / 2, axis=RIGHT)
         scanner_group = VGroup(scanner, laser)
 
@@ -1641,11 +1734,12 @@ class Scene4Vision(ThreeDScene):
             mob.move_to(pos)
             ground = axes3d.c2p(u, v, z)
             mob[1].put_start_and_end_on(pos, ground)
-            # 修复：使用统一的get_scan_data函数，确保数据同步
+            # V13: 使用统一的get_scan_data函数，确保数据同步
             deriv = get_scan_data(u)
+            # V13: 使用语义化颜色
             T_min, T_max = 0.02, 0.4
             alpha = np.clip((abs(deriv) - T_min) / (T_max - T_min), 0, 1)
-            new_color = interpolate_color(COLOR_SMOOTH, COLOR_DIFF, alpha)
+            new_color = interpolate_color(PALETTE["MATH_FUNC"], PALETTE["MATH_ERROR"], alpha)
             mob[0].set_color(new_color)
             mob[1].set_color(new_color)
 
@@ -1662,13 +1756,6 @@ class Scene4Vision(ThreeDScene):
         )
         hud_bg = Rectangle(width=5.2, height=3.0, color=BLACK, fill_opacity=0.65, stroke_width=0)
         hud_group = VGroup(hud_bg, hud_axes).to_corner(DR, buff=0.5)
-
-        # 修复：统一使用get_scan_data函数驱动，确保扫描框和示波器数据同步
-        def get_scan_data(t):
-            """统一的扫描数据函数，确保扫描框和示波器数据一致"""
-            delta = 0.1
-            deriv = (height(t + delta, rows / 2) - height(t - delta, rows / 2)) / (2 * delta)
-            return deriv
         
         def deriv_func(x):
             return get_scan_data(x)
@@ -1690,16 +1777,17 @@ class Scene4Vision(ThreeDScene):
         self.wait(3.0)
 
         scanner_group.remove_updater(update_scanner)
-        self.play(FadeOut(scanner_group), FadeOut(hud_group), FadeOut(graph), FadeOut(dot), run_time=1.4)
+        # V13: 使用生命周期管理
+        self.add_to_math_group(scanner_group, hud_group, graph, dot)
         hud.clear()
-        self.play(FadeOut(VGroup(axes3d, surface)), run_time=1.2)
+        self.clear_scene(fade_out=True, run_time=1.2)
         self.wait(0.6)
 
 
 # =============================================================================
 # Scene 4.6：真实图像处理（灰度→SobelX/Y→幅值→阈值）
 # =============================================================================
-class Scene4_6RealImage(Scene):
+class Scene4_6RealImage(BaseScene):
     """
     真实图像处理链路示意（不加载外部文件，用合成矩阵代替）：
     原图 -> 灰度 -> Sobel X/Y -> 梯度幅值 -> 阈值
@@ -1768,27 +1856,29 @@ class Scene4_6RealImage(Scene):
         if np.max(grad_mag) > 0:
             grad_mag /= np.max(grad_mag)
 
-        gx_img = make_image(gx, box_color=COLOR_DIFF)
-        gy_img = make_image(gy, box_color=COLOR_DIFF)
-        mag_img = make_image(grad_mag, box_color=COLOR_SMOOTH)
+        # V13: 使用语义化颜色
+        gx_img = make_image(gx, box_color=PALETTE["MATH_ERROR"])
+        gy_img = make_image(gy, box_color=PALETTE["MATH_ERROR"])
+        mag_img = make_image(grad_mag, box_color=PALETTE["MATH_FUNC"])
 
         # 阈值可调
         thresh = ValueTracker(0.35)
+        # V13: 使用语义化颜色
         def make_thresholded():
             vals = (grad_mag > thresh.get_value()).astype(float)
-            return make_image(vals, box_color=YELLOW_C)
+            return make_image(vals, box_color=PALETTE["HIGHLIGHT"])
         edge_img = always_redraw(make_thresholded)
 
         # 布局：原图/灰度/SobelX/Y/幅值/阈值 六格
         row1 = VGroup(
             VGroup(raw_img, safer_text("原图", font_size=20, color=WHITE).next_to(raw_img, DOWN, buff=0.15)),
             VGroup(gray_img, safer_text("灰度", font_size=20, color=WHITE).next_to(gray_img, DOWN, buff=0.15)),
-            VGroup(gx_img, safer_text("Sobel X", font_size=20, color=COLOR_DIFF).next_to(gx_img, DOWN, buff=0.15))
+            VGroup(gx_img, safer_text("Sobel X", font_size=20, color=PALETTE["MATH_ERROR"]).next_to(gx_img, DOWN, buff=0.15))
         ).arrange(RIGHT, buff=0.5)
         row2 = VGroup(
-            VGroup(gy_img, safer_text("Sobel Y", font_size=20, color=COLOR_DIFF).next_to(gy_img, DOWN, buff=0.15)),
-            VGroup(mag_img, safer_text("|G|", font_size=20, color=COLOR_SMOOTH).next_to(mag_img, DOWN, buff=0.15)),
-            VGroup(edge_img, safer_text("阈值边缘", font_size=20, color=YELLOW_C).next_to(edge_img, DOWN, buff=0.15))
+            VGroup(gy_img, safer_text("Sobel Y", font_size=20, color=PALETTE["MATH_ERROR"]).next_to(gy_img, DOWN, buff=0.15)),
+            VGroup(mag_img, safer_text("|G|", font_size=20, color=PALETTE["MATH_FUNC"]).next_to(mag_img, DOWN, buff=0.15)),
+            VGroup(edge_img, safer_text("阈值边缘", font_size=20, color=PALETTE["HIGHLIGHT"]).next_to(edge_img, DOWN, buff=0.15))
         ).arrange(RIGHT, buff=0.5)
         grid = VGroup(row1, row2).arrange(DOWN, buff=0.6).scale(0.9).move_to(ORIGIN)
 
@@ -1803,15 +1893,17 @@ class Scene4_6RealImage(Scene):
         self.play(thresh.animate.set_value(0.35), run_time=1.0)
         self.wait(0.6)
 
-        self.play(FadeOut(grid), run_time=1.0)
+        # V13: 使用生命周期管理
+        self.add_to_math_group(grid)
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.4)
 
 
 # =============================================================================
 # Scene 4.5：应用对照（道路 + 文本）
 # =============================================================================
-class Scene4_5Applications(Scene):
+class Scene4_5Applications(BaseScene):
     """第 4.5 部分：简单的应用对照示例"""
 
     def construct(self):
@@ -1844,8 +1936,10 @@ class Scene4_5Applications(Scene):
         self.play(FadeIn(VGroup(thresh_triplet, thresh_title), shift=UP * 0.2), run_time=1.0)
         self.wait(1.4)
 
-        self.play(FadeOut(VGroup(grid, thresh_triplet, thresh_title)), run_time=1.0)
+        # V13: 使用生命周期管理
+        self.add_to_math_group(grid, thresh_triplet, thresh_title)
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.0)
         self.wait(0.6)
 
     def _make_road_pair(self):
@@ -1874,7 +1968,8 @@ class Scene4_5Applications(Scene):
             for j in range(size):
                 dist = abs(j - size / 2)
                 if 2.4 < dist < 3.2:
-                    color = COLOR_DIFF
+                    # V13: 使用语义化颜色
+                    color = PALETTE["EDGE"]
                     op = 0.95
                 else:
                     color = BLACK
@@ -1917,7 +2012,8 @@ class Scene4_5Applications(Scene):
                     (2 <= j <= 5 and i in [4])
                 )
                 if on_edge:
-                    color = COLOR_DIFF
+                    # V13: 使用语义化颜色
+                    color = PALETTE["EDGE"]
                     op = 0.95
                 else:
                     color = BLACK
@@ -1966,7 +2062,8 @@ class Scene4_5Applications(Scene):
                     (i == 2 and j in [2, 5]) or
                     (i == 5 and 2 <= j <= 5)
                 )
-                color = COLOR_DIFF if on_edge else BLACK
+                # V13: 使用语义化颜色
+                color = PALETTE["EDGE"] if on_edge else BLACK
                 op = 0.95 if on_edge else 0.08
                 sq = Square(side_length=0.2, stroke_width=0, fill_opacity=op)
                 sq.set_fill(color)
@@ -2013,7 +2110,8 @@ class Scene4_5Applications(Scene):
                     on_edge = True
                 else:
                     on_edge = False
-                color = COLOR_DIFF if on_edge else BLACK
+                # V13: 使用语义化颜色
+                color = PALETTE["EDGE"] if on_edge else BLACK
                 op = 0.95 if on_edge else 0.08
                 sq = Square(side_length=cell, stroke_width=0, fill_opacity=op)
                 sq.set_fill(color)
@@ -2049,7 +2147,8 @@ class Scene4_5Applications(Scene):
                             neigh.append(intensities[ni, nj])
                     diff = max(abs(val - n) for n in neigh) if neigh else 0
                     on_edge = diff > t
-                    color = COLOR_DIFF if on_edge else BLACK
+                    # V13: 使用语义化颜色
+                    color = PALETTE["EDGE"] if on_edge else BLACK
                     op = 0.9 if on_edge else 0.05
                     sq = Square(side_length=cell, stroke_width=0, fill_opacity=op)
                     sq.set_fill(color)
@@ -2066,7 +2165,7 @@ class Scene4_5Applications(Scene):
 # =============================================================================
 # Scene 5：总结与片尾
 # =============================================================================
-class Scene5Outro(Scene):
+class Scene5Outro(BaseScene):
     """第六部分：回顾与片尾"""
 
     def construct(self):
@@ -2077,19 +2176,25 @@ class Scene5Outro(Scene):
 
         step1 = safer_text("连续 → 离散", font_size=26, color=WHITE)
         step2 = MathTex(r"f'(x) \approx \dfrac{f(x+1)-f(x-1)}{2}", font_size=32, color=WHITE)
-        step3 = IntegerMatrix([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]).scale(0.6).set_color_by_gradient(COLOR_DIFF, GOLD_C, COLOR_SMOOTH)
+        # V13: 使用语义化颜色
+        step3 = IntegerMatrix([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]]).scale(0.6).set_color_by_gradient(PALETTE["MATH_ERROR"], PALETTE["HIGHLIGHT"], PALETTE["MATH_FUNC"])
         step4 = safer_text("边缘检测 / 结构提取", font_size=26, color=WHITE)
 
         recap = VGroup(step1, step2, step3, step4).arrange(DOWN, buff=0.6, aligned_edge=LEFT).to_edge(LEFT, buff=0.8)
+        # V13: 添加到数学组（在定义之后）
+        self.add_to_math_group(recap)
         self.play(FadeIn(recap, shift=UP * 0.2), run_time=1.8)
         self.wait(3.0)
 
         hud.show("知行合一：数学理想 Δx→0，工程现实 pixel=1。", wait_after=2.0)
         self.wait(2.0)
 
-        philosophy = safer_text("让机器在嘈杂世界里，找到最清晰的边界。", font_size=32, color=YELLOW_C)
+        # V13: 使用语义化颜色
+        philosophy = safer_text("让机器在嘈杂世界里，找到最清晰的边界。", font_size=32, color=PALETTE["HIGHLIGHT"])
         phil_bg = BackgroundRectangle(philosophy, fill_opacity=0.7, color=BLACK, buff=0.3, corner_radius=0.08)
         phil_group = VGroup(phil_bg, philosophy).move_to(ORIGIN)
+        # V13: 添加到数学组（在定义之后）
+        self.add_to_math_group(phil_group)
         self.play(
             Succession(
                 phil_group.animate.scale(1.1).set_opacity(0),
@@ -2101,8 +2206,9 @@ class Scene5Outro(Scene):
         self.wait(3.0)
 
         # 修复：强制演职员表y > -2.0，避免与字幕重叠
+        # V13: 使用语义化颜色
         credits = VGroup(
-            safer_text("Project Sobel", font_size=30, color=COLOR_CONTINUOUS),
+            safer_text("Project Sobel", font_size=30, color=PALETTE["MATH_FUNC"]),
             safer_text("Visuals: Manim Community Edition", font_size=20, color=GREY_B),
             safer_text("Code: Python 3.10 + Manim", font_size=20, color=GREY_B),
             safer_text("原创声明：本视频所有动画均为编程生成，素材来源已在文档列出。", font_size=22, color=WHITE),
@@ -2112,18 +2218,55 @@ class Scene5Outro(Scene):
         self.play(LaggedStart(*[FadeIn(line, shift=UP * 0.2) for line in credits], lag_ratio=0.2, run_time=2.2))
         self.wait(4.0)
 
-        self.play(FadeOut(VGroup(recap, phil_group, credits)), run_time=1.6)
+        # V13: 使用生命周期管理
+        self.add_to_math_group(credits)
         hud.clear()
+        self.clear_scene(fade_out=True, run_time=1.6)
         self.wait(0.8)
 
 
-# 运行示例：
-# manim -pql sobel_v12_full.py Scene0Intro
-# manim -pql sobel_v12_full.py Scene1Discrete
-# manim -pql sobel_v12_full.py Scene2Taylor
-# manim -pql sobel_v12_full.py Scene3SobelConstruct
-# manim -pql sobel_v12_full.py Scene4Vision
-# manim -pql sobel_v12_full.py Scene4_5Applications
-# manim -pql sobel_v12_full.py Scene5Outro
+# =============================================================================
+# 渲染指令说明
+# =============================================================================
+"""
+V13 版本渲染命令
+
+快速预览（低质量，用于调试）：
+    manim -pql sobel_v13_full.py Scene0Intro
+    manim -pql sobel_v13_full.py Scene1Discrete
+    manim -pql sobel_v13_full.py Scene1_5Limits
+    manim -pql sobel_v13_full.py Scene2Taylor
+    manim -pql sobel_v13_full.py Scene2_5Comparison
+    manim -pql sobel_v13_full.py Scene3SobelConstruct
+    manim -pql sobel_v13_full.py Scene3_5Convolution
+    manim -pql sobel_v13_full.py Scene4_2MultiScale
+    manim -pql sobel_v13_full.py Scene4Vision
+    manim -pql sobel_v13_full.py Scene4_6RealImage
+    manim -pql sobel_v13_full.py Scene4_5Applications
+    manim -pql sobel_v13_full.py Scene5Outro
+
+完整视频（低质量预览）：
+    manim -pql sobel_v13_full.py FullSobelVideo
+
+高质量渲染（最终输出）：
+    manim -pqh sobel_v13_full.py Scene0Intro
+    manim -pqh sobel_v13_full.py FullSobelVideo
+
+参数说明：
+    -p : 渲染后自动预览
+    -q : 质量等级
+        l = low (480p, 15fps) - 快速调试
+        m = medium (720p, 30fps) - 平衡选择
+        h = high (1080p, 60fps) - 最终输出
+        k = 4K (2160p, 60fps) - 超高质量（渲染时间很长）
+
+注意事项：
+    1. 首次渲染可能需要较长时间（编译 LaTeX、生成缓存等）
+    2. 完整视频渲染时间取决于场景数量和复杂度
+    3. 建议先用 -pql 测试单个场景，确认无误后再渲染完整视频
+    4. 如果遇到 LaTeX 错误，检查是否在 MathTex 中使用了中文
+    5. 如果遇到 AttributeError，检查类继承关系是否正确
+"""
+
 if __name__ == "__main__":
     pass
