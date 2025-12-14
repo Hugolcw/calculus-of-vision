@@ -105,6 +105,7 @@ class SubtitleManager:
     """
     字幕管理器：固定在屏幕底部，不随场景移动
     融合 V11 的 fixed_in_frame_mobjects 稳定性和 V10 的自动时长计算
+    V14 增强：支持自动换行和宽度检查，防止字幕超出屏幕
     """
     
     def __init__(self, scene: Scene):
@@ -124,6 +125,87 @@ class SubtitleManager:
         final_time = base_time + complexity_bonus
         return max(2.0, min(final_time, 6.0))
     
+    def _wrap_text_to_fit_width(self, text: str, max_width: float, font_size: float) -> str:
+        """
+        自动换行文本以适应最大宽度（保守策略：只在必要时换行）
+        
+        参数:
+        - text: 原始文本
+        - max_width: 最大宽度（Manim 单位）
+        - font_size: 字号
+        
+        返回: 换行后的文本（用 \n 分隔）
+        """
+        # 保守估算：使用较小的字符宽度，避免过早换行
+        # 中文字符宽度约为 font_size * 0.55（更保守的估算）
+        # 英文字符宽度约为 font_size * 0.3
+        char_width_zh = font_size * 0.55
+        char_width_en = font_size * 0.3
+        
+        # 计算每行大约能容纳的字符数（使用更宽松的估算）
+        avg_char_width = (char_width_zh + char_width_en) / 2
+        # 增加 10% 的容差，避免过早换行
+        chars_per_line = int(max_width / avg_char_width * 1.1)
+        
+        # 如果文本本身就不长，不需要换行
+        if len(text) <= chars_per_line:
+            return text
+        
+        if chars_per_line <= 0:
+            chars_per_line = max(10, len(text) // 2)  # 最小行宽，至少保证可读性
+        
+        # 智能换行：优先在标点符号处换行
+        lines = []
+        current_line = ""
+        
+        import re
+        # 按标点符号和空格分割（保留分隔符）
+        segments = re.split(r'([，。！？；：、\s]+)', text)
+        
+        for segment in segments:
+            if not segment:
+                continue
+            
+            # 如果当前行加上新段落后不超过限制
+            test_line = current_line + segment
+            # 保守检查：允许轻微超出（10%）
+            if len(test_line) <= chars_per_line * 1.1:
+                current_line = test_line
+            else:
+                # 需要换行
+                if current_line:
+                    lines.append(current_line.strip())
+                # 如果单个段落就超过限制，尝试在段落内换行
+                if len(segment) > chars_per_line:
+                    # 尝试在合适的位置分割
+                    words = re.split(r'(\s+)', segment) if re.search(r'\s', segment) else [segment]
+                    temp_line = ""
+                    for word in words:
+                        if len(temp_line + word) <= chars_per_line:
+                            temp_line += word
+                        else:
+                            if temp_line:
+                                lines.append(temp_line.strip())
+                            temp_line = word
+                    current_line = temp_line
+                else:
+                    current_line = segment
+        
+        if current_line:
+            lines.append(current_line.strip())
+        
+        result = "\n".join(lines) if lines else text
+        # 限制最大行数，避免过度换行导致字幕区域占用过大
+        max_lines = 3
+        if result.count('\n') >= max_lines:
+            # 如果行数过多，适当增加每行字符数
+            lines = result.split('\n')
+            if len(lines) > max_lines:
+                # 合并前几行
+                result = '\n'.join(lines[:max_lines])
+        
+        return result
+    
     def show(
         self,
         text: str,
@@ -134,7 +216,7 @@ class SubtitleManager:
         fade_in: bool = True
     ):
         """
-        显示字幕（固定在屏幕底部）
+        显示字幕（固定在屏幕底部，自动换行防止超出屏幕）
         
         参数:
         - text: 字幕文本
@@ -151,11 +233,24 @@ class SubtitleManager:
         # 清除旧字幕
         self.clear(fade_out=True)
         
+        # V14 增强：自动换行以适应安全区域宽度（保守策略）
+        # 字幕最大宽度 = 安全区域宽度 - 左右边距（使用更宽松的边距）
+        max_subtitle_width = SAFE_RECT["width"] - 0.6  # 左右各留 0.3 边距（更宽松）
+        wrapped_text = self._wrap_text_to_fit_width(text, max_subtitle_width, font_size)
+        
         # 创建字幕（使用 SimHei 字体，失败则回退）
         try:
-            subtitle = Text(text, font_size=font_size, color=color, font="SimHei")
+            subtitle = Text(wrapped_text, font_size=font_size, color=color, font="SimHei")
         except Exception:
-            subtitle = Text(text, font_size=font_size, color=color)
+            subtitle = Text(wrapped_text, font_size=font_size, color=color)
+        
+        # V14 增强：检查字幕宽度，只在明显超出时才缩放（保守策略）
+        # 允许轻微超出（5%），避免过度缩放影响可读性
+        if subtitle.width > max_subtitle_width * 1.05:
+            scale_factor = max_subtitle_width / subtitle.width * 0.98  # 留 2% 余量，更保守
+            # 最小缩放比例为 0.8，保证可读性
+            scale_factor = max(0.8, scale_factor)
+            subtitle.scale(scale_factor)
         
         # V13 修复：使用固定Y坐标，避免遮挡
         subtitle.move_to(ORIGIN + DOWN * 3.2)  # 对应 SUBTITLE_Y = -3.2
@@ -219,6 +314,122 @@ def safer_text(s: str, font_size: float = 30, color: str = WHITE) -> Text:
         return Text(s, font_size=font_size, color=color, font="SimHei")
     except Exception:
         return Text(s, font_size=font_size, color=color)
+
+
+def ensure_safe_bounds(
+    mobject: Mobject, 
+    max_width: Optional[float] = None, 
+    max_height: Optional[float] = None, 
+    scale_factor: float = 0.98,
+    tolerance: float = 0.1,
+    conservative: bool = True
+) -> Mobject:
+    """
+    V14 新增：确保对象在安全区域内，防止超出屏幕（保守策略）
+    
+    参数:
+    - mobject: 要检查的对象
+    - max_width: 最大宽度（None 则使用 SAFE_RECT["width"]）
+    - max_height: 最大高度（None 则使用 SAFE_RECT["height"]）
+    - scale_factor: 缩放因子（0.98 表示留 2% 边距，更保守）
+    - tolerance: 容差比例（只有超出这个比例时才调整，默认 10%）
+    - conservative: 保守模式（True 时只在明显超出时才缩放，避免过度缩小）
+    
+    返回: 调整后的对象
+    """
+    if max_width is None:
+        max_width = SAFE_RECT["width"] * scale_factor
+    if max_height is None:
+        max_height = SAFE_RECT["height"] * scale_factor
+    
+    # 保守策略：只有在明显超出时才缩放（避免过度缩小影响可读性）
+    width_ratio = mobject.width / max_width
+    height_ratio = mobject.height / max_height
+    
+    if conservative:
+        # 保守模式：只有超出 5% 以上才缩放，且最小缩放比例为 0.85（保证可读性）
+        min_scale = 0.85
+        if width_ratio > 1.05:  # 超出 5%
+            scale_w = max(min_scale, max_width / mobject.width)
+            mobject.scale(scale_w)
+            # 重新计算比例
+            width_ratio = mobject.width / max_width
+        
+        if height_ratio > 1.05:  # 超出 5%
+            scale_h = max(min_scale, max_height / mobject.height)
+            mobject.scale(scale_h)
+    else:
+        # 标准模式：超出就缩放
+        if mobject.width > max_width:
+            scale_w = max_width / mobject.width
+            mobject.scale(scale_w)
+        
+        if mobject.height > max_height:
+            scale_h = max_height / mobject.height
+            mobject.scale(scale_h)
+    
+    # 检查位置是否超出边界（使用更大的边界，允许轻微超出）
+    margin = 0.3  # 允许轻微超出 0.3 单位
+    left_bound = -SAFE_RECT["width"] / 2 - margin
+    right_bound = SAFE_RECT["width"] / 2 + margin
+    top_bound = SAFE_RECT["height"] / 2 + margin
+    bottom_bound = -SAFE_RECT["height"] / 2 - margin
+    
+    # 获取边界框（使用 get_bounding_box 或手动计算）
+    try:
+        # 尝试使用 get_bounding_box（如果可用）
+        bbox = mobject.get_bounding_box()
+        min_x, min_y, _ = bbox[0]
+        max_x, max_y, _ = bbox[1]
+    except AttributeError:
+        # 回退方案：使用 get_critical_point 估算
+        center = mobject.get_center()
+        half_width = mobject.width / 2
+        half_height = mobject.height / 2
+        min_x = center[0] - half_width
+        max_x = center[0] + half_width
+        min_y = center[1] - half_height
+        max_y = center[1] + half_height
+    
+    # 保守的位置调整：只在明显超出时才移动（避免破坏原有布局）
+    position_tolerance = 0.2  # 允许轻微超出 0.2 单位
+    
+    # 如果明显超出左边界（超出容差），向右移动
+    if min_x < left_bound - position_tolerance:
+        shift_amount = left_bound - min_x + 0.1
+        mobject.shift(RIGHT * shift_amount)
+        # 重新计算边界
+        center = mobject.get_center()
+        half_width = mobject.width / 2
+        max_x = center[0] + half_width
+    
+    # 如果明显超出右边界（超出容差），向左移动
+    if max_x > right_bound + position_tolerance:
+        shift_amount = max_x - right_bound + 0.1
+        mobject.shift(LEFT * shift_amount)
+        # 重新计算边界
+        center = mobject.get_center()
+        half_width = mobject.width / 2
+        min_x = center[0] - half_width
+    
+    # 如果明显超出上边界（超出容差），向下移动
+    if max_y > top_bound + position_tolerance:
+        shift_amount = max_y - top_bound + 0.1
+        mobject.shift(DOWN * shift_amount)
+        # 重新计算边界
+        center = mobject.get_center()
+        half_height = mobject.height / 2
+        min_y = center[1] - half_height
+    
+    # 如果明显超出下边界（超出容差），向上移动（但要避免与字幕重叠）
+    if min_y < bottom_bound - position_tolerance:
+        # 字幕在 -3.2，所以下边界应该高于 -3.5
+        safe_bottom = max(bottom_bound, SUBTITLE_Y + 0.5)
+        if min_y < safe_bottom - position_tolerance:
+            shift_amount = safe_bottom - min_y + 0.1
+            mobject.shift(UP * shift_amount)
+    
+    return mobject
 
 
 # =============================================================================

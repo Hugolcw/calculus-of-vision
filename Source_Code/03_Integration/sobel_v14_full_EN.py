@@ -37,6 +37,8 @@ from utils_v14 import (
     show_solution,  # 展示解决
     show_validation,  # 展示验证
 )
+# V14 增强：导入安全检查函数
+from utils_v13 import ensure_safe_bounds
 
 
 # =============================================================================
@@ -235,9 +237,8 @@ class Scene0Intro(BaseThreeDScene):
         right_status = VGroup(edge_final.scale(0.7), edge_final_highlight.scale(0.7))
         right_status.arrange(DOWN, buff=0.15)
         pair = VGroup(left_pair, right_status).arrange(RIGHT, buff=0.8).move_to(ORIGIN)
-        # 确保在安全区内
-        if pair.get_width() > SAFE_RECT["width"]:
-            pair.scale(SAFE_RECT["width"] / pair.get_width() * 0.95)
+        # V14 增强：确保在安全区内（使用新的安全检查函数）
+        ensure_safe_bounds(pair)
         title_clean_final = safer_text("Clean Image", font_size=22, color=WHITE).next_to(clean_final, DOWN, buff=0.2)
         title_noisy_final = safer_text("Noisy Image", font_size=22, color=WHITE).next_to(noisy_final, DOWN, buff=0.2)
         title_edge_final = safer_text("Extracted Edges", font_size=22, color=PALETTE["EDGE"]).next_to(edge_final, DOWN, buff=0.2)
@@ -256,6 +257,8 @@ class Scene0Intro(BaseThreeDScene):
             font_size=34, 
             color=PALETTE["HIGHLIGHT"]
         )
+        # V14 增强：确保问题文本在安全区域内
+        ensure_safe_bounds(core_question)
         question_bg = BackgroundRectangle(
             core_question,
             fill_opacity=0.7,
@@ -264,6 +267,8 @@ class Scene0Intro(BaseThreeDScene):
             corner_radius=0.08
         )
         question_group = VGroup(question_bg, core_question).move_to(ORIGIN + UP * 1.6)
+        # V14 增强：确保整个问题组在安全区域内
+        ensure_safe_bounds(question_group)
         self.add_fixed_in_frame_mobjects(question_group)
         self.add_to_math_group(question_group)
         
@@ -1009,8 +1014,12 @@ class Scene2Taylor(BaseScene):
             font_size=32,
             color=WHITE,
         )
+        # V14 增强：定位后再检查，使用保守模式（避免过度调整）
         right_tex.to_edge(UP, buff=1.2).shift(RIGHT * 2.3)
         left_tex.next_to(right_tex, DOWN, buff=0.6, aligned_edge=LEFT)
+        # V14 增强：只在定位后检查一次，使用保守模式
+        ensure_safe_bounds(right_tex, conservative=True, scale_factor=0.98)
+        ensure_safe_bounds(left_tex, conservative=True, scale_factor=0.98)
 
         # V14 叙事重构：解决（展示巧合）
         # V14 新文案：解释"为什么"误差能抵消
@@ -1118,6 +1127,8 @@ class Scene2Taylor(BaseScene):
             font_size=40,
             color=WHITE,
         ).move_to(RIGHT * 2.8 + DOWN * 0.3)
+        # V14 增强：确保公式在安全区域内（保守模式，避免过度缩放）
+        ensure_safe_bounds(diff_tex, conservative=True, scale_factor=0.98)
 
         # V14 节奏控制：慢动作展示结果
         self.play(TransformMatchingTex(VGroup(right_tex, left_tex), diff_tex), run_time=1.8 * PacingController.SLOW_MOTION_FACTOR)
@@ -2334,8 +2345,12 @@ class Scene5Outro(BaseScene):
 
         # V13: 使用语义化颜色
         philosophy = safer_text("Let machines find the clearest boundaries in a noisy world.", font_size=32, color=PALETTE["HIGHLIGHT"])
+        # V14 增强：确保哲学文本在安全区域内
+        ensure_safe_bounds(philosophy)
         phil_bg = BackgroundRectangle(philosophy, fill_opacity=0.7, color=BLACK, buff=0.3, corner_radius=0.08)
         phil_group = VGroup(phil_bg, philosophy).move_to(ORIGIN)
+        # V14 增强：确保整个哲学组在安全区域内
+        ensure_safe_bounds(phil_group)
         # V13: 添加到数学组（在定义之后）
         self.add_to_math_group(phil_group)
         self.play(
