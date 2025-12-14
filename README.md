@@ -16,7 +16,7 @@
 
 **Sobel Universe** 是一个数学可视化教育项目，通过精美的动画展示微积分中的**导数**概念如何从抽象的数学理论转化为实际的工程应用——**Sobel边缘检测算法**。
 
-本项目是数学分析课程大作业，属于"数学与生活小故事录制"方向，通过学科交叉的方式（数学 × 计算机视觉 × 通信工程）展示数学在AI和图像处理中的应用。
+本项目通过学科交叉的方式（数学 × 计算机视觉 × 通信工程）展示数学在AI和图像处理中的应用。
 
 ### 🎯 核心主题
 
@@ -94,7 +94,7 @@
 - 展示核心哲学思想："从数学理想到工程现实"
 - 版权声明和工具说明
 
-**总时长**: 约127.5秒（纯动画），含旁白预计6-7分钟，符合作业要求（≤ 8分钟）✅
+**总时长**: 约127.5秒（纯动画），含旁白预计6-7分钟
 
 ---
 
@@ -146,12 +146,12 @@ pip install manim numpy
 - **Linux**: `sudo apt-get install texlive-full`（Ubuntu/Debian）
 - **macOS**: `brew install --cask mactex`（使用 Homebrew）
 
-#### 迭代版（全流程代码）快速预览
+#### 快速预览
 
 ```bash
-cd calculus-of-vision/全流程代码
-manim -pql sobel_v10_iterative.py SobelUniverse   # Scene 0 引言 + 字幕系统
-manim -pqh sobel_v10_iterative.py SobelUniverse   # 高质量
+cd calculus-of-vision/Main_Thread_Programme/03_Integration
+manim -pql sobel_v14_full.py FullSobelVideo   # 低质量预览
+manim -pqh sobel_v14_full.py FullSobelVideo   # 高质量渲染
 ```
 
 ### 2. 渲染视频
@@ -159,8 +159,8 @@ manim -pqh sobel_v10_iterative.py SobelUniverse   # 高质量
 #### 低质量预览（快速调试）
 
 ```bash
-cd calculus-of-vision/final_version
-manim -pql sobel_complete.py SobelUniverse
+cd calculus-of-vision/Main_Thread_Programme/03_Integration
+manim -pql sobel_v14_full.py FullSobelVideo
 ```
 
 - **质量**: 480P
@@ -170,12 +170,13 @@ manim -pql sobel_complete.py SobelUniverse
 #### 高质量渲染（最终版本）
 
 ```bash
-manim -pqh sobel_complete.py SobelUniverse
+cd calculus-of-vision/Main_Thread_Programme/03_Integration
+manim -pqh sobel_v14_full.py FullSobelVideo
 ```
 
 - **质量**: 1080P
 - **速度**: 较慢（约30-60分钟，取决于硬件）
-- **用途**: 最终提交
+- **用途**: 最终渲染
 
 #### 参数说明
 
@@ -189,7 +190,7 @@ manim -pqh sobel_complete.py SobelUniverse
 渲染后的视频位于：
 
 ```
-media/videos/sobel_complete/[质量]/SobelUniverse.mp4
+media/videos/sobel_v14_full/[质量]/FullSobelVideo.mp4
 ```
 
 ---
@@ -199,22 +200,23 @@ media/videos/sobel_complete/[质量]/SobelUniverse.mp4
 ```
 calculus-of-vision/
 ├── README.md                         # 项目技术文档（本文件）
-├── 全流程代码/                        # 版本化迭代代码（v01-v10）
-│   ├── sobel_v10_iterative.py       # 最新迭代版，含Scene 0 & 字幕系统
-│   ├── sobel_v09_complete_rich.py   # 上一里程碑的完整版
-│   ├── sobel_v01_basic.py ...       # 早期版本，用于对比演进
-├── final_version/                    # 最终版本文件夹
-│   ├── sobel_complete.py            # 完整源代码（主文件）
-│   ├── 脚本文档.md                   # 创作思路、作品意义、素材来源
-│   ├── 说明.md                       # 组员名单、文件说明（提交用）
-│   ├── 提交指南与检查清单.md         # 提交要求+勾选清单（合并版）
-│   ├── 旁白与剪辑指南.md             # 旁白脚本和剪辑建议
-│   ├── 时长估算.md                   # 各场景时长分析
-│   ├── 专家意见汇总.md               # 代码审查和优化建议
-│   └── 代码实现指南.md               # 代码架构/模块/注意事项（合并版）
-├── 一次性视频/                       # 开发过程中的测试版本
-├── 视频剧本.md                       # 视频剧本
-└── MD文档/                           # 方案、反思与复盘等文档
+├── Main_Thread_Programme/           # 主要代码文件夹
+│   ├── 01_Initial_Stage/            # 初始阶段代码（v01-v08）
+│   ├── 02_Transtionsl_Period/       # 过渡期代码（v09-v12）
+│   └── 03_Integration/              # 集成版本代码（v13-v14）
+├── MD文档/                           # 方案、反思与复盘等文档
+│   ├── 00_项目提交/                  # 项目提交相关文档
+│   ├── 01_开发指南/                  # 开发指南文档
+│   ├── 02_版本管理与复盘/            # 版本管理和复盘文档
+│   ├── 03_方案设计/                  # 方案设计文档
+│   ├── 04_制作指南/                  # 制作指南文档
+│   ├── 05_剧本与脚本/                # 剧本和脚本文档
+│   ├── 06_代码示例/                  # 代码示例
+│   ├── 07_配音文案/                  # 配音文案
+│   └── 08_其他文档/                  # 其他文档
+├── 脚本文档.md                       # 创作思路、作品意义、素材来源
+├── 说明.md                           # 组员名单、文件说明
+└── 渲染视频/                         # 渲染输出文件夹
 ```
 
 ---
@@ -361,53 +363,9 @@ image_data = get_downsampled_array("path/to/your/image.png", rate=10)
 
 ---
 
-## 📝 文件说明
+## 📄 原创声明与素材来源
 
-### 必需文件（提交时包含）
-
-1. **视频文件**：`数学与生活 - Sobel算子与视觉的微积分 - [学号姓名] - 视频.mp4`
-2. **脚本文档**：`数学与生活 - Sobel算子与视觉的微积分 - [学号姓名] - 脚本.md`
-3. **源代码**：`数学与生活 - Sobel算子与视觉的微积分 - [学号姓名] - 代码.py`
-4. **说明文件**：`说明.md`（组员名单、文件说明）
-
-### 辅助文件（可选）
-
-- `README.md` - 本文件（技术文档）
-- `旁白与剪辑指南.md` - 旁白脚本和剪辑建议
-- `专家意见汇总.md` - 代码审查和优化建议
-- `时长估算.md` - 各场景时长分析
-- `提交指南与检查清单.md` - 提交要求 + 勾选
-- `代码实现指南.md` - 代码架构/模块/编码注意事项
-
----
-
-## 🧭 新增资源速览
-
-- **全流程代码/**：保留 v01-v10 的演进版本，便于对比思路；`sobel_v10_iterative.py` 内置 Scene 0 引言与字幕管理器（自动时长、平滑切换、统一色板/字体），默认只跑 Scene 0，适合讲稿彩排。
-- **MD文档/01_项目概览与提交**：
-  - `迭代版本说明.md`：Scene 0 目标、时长 75-90s、字幕系统用法、检查清单与下一步计划。
-  - `提交指南与检查清单.md`：一页式提交流程（填组员→渲染→重命名→打包）+ 勾选表。
-  - `代码实现指南.md`：全局色板/字体规范、各场景关键要点、避坑与开发流程清单。
-  - `说明.md`：组员名单模板（需补全姓名/学号/分工）。
-- **MD文档/03_方案与制作指南**：
-  - `旁白与剪辑指南.md`：全场景旁白时间轴、重音/停顿提示，定格/变速剪辑策略解决 127.5s 画面对应 5-7 分钟旁白的“手风琴”问题。
-  - `时长估算.md`：各场景精确用时，总计 127.5s（纯动画），含旁白预计 6-7 分钟；已计入 Scene 3.5 噪声、卷积可分离性与像素级放大镜等新增内容。
-
----
-
-## ✅ 提交与检查要点（速览）
-
-- 填写 `final_version/说明.md`：补齐姓名、学号、分工。
-- 渲染最终版：`manim -pqh final_version/sobel_complete.py SobelUniverse`（输出 `media/videos/sobel_complete/[质量]/SobelUniverse.mp4`）。
-- 统一命名（示例）：`数学与生活 - Sobel算子与视觉的微积分 - 2023001张三 - 视频.mp4 / 脚本.md / 代码.py`。
-- 打包压缩：同名 `.zip`，仅包含视频、脚本文档、源代码、`说明.md` 四个必需文件。
-- 提交前对照 `提交指南与检查清单.md` 勾选：时长 ≤ 8 分钟、清晰度 ≥ 720P、原创声明到位、命名规范。
-
----
-
-## 📄 许可证与原创声明
-
-### 原创声明
+### ✅ 原创声明
 
 **本作品所有内容均为原创**：
 
@@ -417,20 +375,20 @@ image_data = get_downsampled_array("path/to/your/image.png", rate=10)
 - ✅ 未使用任何外部图片、视频素材
 - ✅ 未使用 AI 生成内容
 
-### 使用的开源工具
+### 📚 使用的开源工具与理论来源
 
-- **Manim Community Edition**: MIT License
-- **Python**: Python Software Foundation License
-- **NumPy**: BSD License
+#### 开源工具
 
-### 数学理论来源
+- **Manim Community Edition**: MIT License - 数学动画制作引擎
+- **Python**: Python Software Foundation License - 编程语言
+- **NumPy**: BSD License - 数值计算库
 
-- 泰勒展开公式：标准数学理论
-- 中心差分法：数值分析经典方法
-- Sobel算子：计算机视觉经典算法（Irwin Sobel, 1968）
-- 边缘检测理论：数字图像处理标准内容
+#### 数学理论来源
 
-详细素材来源标注请参见 `脚本文档.md`。
+- **泰勒展开公式**：标准数学理论（微积分基础）
+- **中心差分法**：数值分析经典方法（数值微分）
+- **Sobel算子**：计算机视觉经典算法（Irwin Sobel, 1968）
+- **边缘检测理论**：数字图像处理标准内容
 
 ---
 
@@ -438,7 +396,6 @@ image_data = get_downsampled_array("path/to/your/image.png", rate=10)
 
 - **Manim Community** - 强大的数学动画制作工具
 - **3Blue1Brown** - 数学可视化的灵感来源
-- **数学分析课程** - 提供了项目背景和要求
 
 ---
 
@@ -460,6 +417,6 @@ image_data = get_downsampled_array("path/to/your/image.png", rate=10)
 ---
 
 *最后更新: 2024年12月*  
-*文档版本: v2.0*
+*文档版本: v4.0*
 
 </div>
