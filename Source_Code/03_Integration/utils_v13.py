@@ -10,6 +10,8 @@ V13 统一工具模块
 from manim import *
 import numpy as np
 from typing import Optional, Literal
+import textwrap
+import re
 
 # =============================================================================
 # V13 模块一：语义化色彩系统 (Semantic Palette)
@@ -116,18 +118,28 @@ class SubtitleManager:
     def _calculate_auto_duration(self, text: str) -> float:
         """
         自动计算字幕显示时长（基于文本长度 + 关键词复杂度）
-        每个字符约 0.12 秒，最小 2 秒，最大 6 秒
+        基础阅读时间：每字 0.25秒，最小 2.5秒
+        支持中英文关键词识别
         """
-        base_time = len(text) * 0.12
-        # 复杂概念需要更多时间
-        complex_keywords = ["导数", "泰勒", "算子", "卷积", "离散", "连续", "微积分", "误差", "抵消"]
-        complexity_bonus = sum(1 for keyword in complex_keywords if keyword in text) * 0.3
-        final_time = base_time + complexity_bonus
-        return max(2.0, min(final_time, 6.0))
+        # 基础阅读时间：每字 0.25秒
+        read_time = len(text) * 0.25
+        
+        # 认知负荷补偿（复杂概念需要更多时间）
+        # 中文关键词
+        complex_keywords_zh = ["导数", "泰勒", "算子", "卷积", "离散", "连续", "微积分", "误差", "抵消", "Δx"]
+        # 英文关键词
+        complex_keywords_en = ["derivative", "Taylor", "operator", "convolution", "discrete", "continuous", 
+                              "calculus", "error", "cancel", "gradient", "edge detection", "Sobel"]
+        
+        if any(x in text for x in complex_keywords_zh + complex_keywords_en):
+            read_time += 1.0
+        
+        # 最小停留 2.5秒
+        return max(2.5, read_time)
     
     def _wrap_text_to_fit_width(self, text: str, max_width: float, font_size: float) -> str:
         """
-        自动换行文本以适应最大宽度（保守策略：只在必要时换行）
+        智能换行：支持中英文混合文本
         
         参数:
         - text: 原始文本
@@ -136,31 +148,36 @@ class SubtitleManager:
         
         返回: 换行后的文本（用 \n 分隔）
         """
-        # 保守估算：使用较小的字符宽度，避免过早换行
-        # 中文字符宽度约为 font_size * 0.55（更保守的估算）
+        # 估算每行字符数（基于字符宽度）
+        # 中文字符宽度约为 font_size * 0.55
         # 英文字符宽度约为 font_size * 0.3
         char_width_zh = font_size * 0.55
         char_width_en = font_size * 0.3
         
-        # 计算每行大约能容纳的字符数（使用更宽松的估算）
+        # 计算每行大约能容纳的字符数（使用保守估算）
+        # 假设文本是中文和英文混合，取平均值
         avg_char_width = (char_width_zh + char_width_en) / 2
-        # 增加 10% 的容差，避免过早换行
-        chars_per_line = int(max_width / avg_char_width * 1.1)
+        max_chars_per_line = int(max_width / avg_char_width)
         
         # 如果文本本身就不长，不需要换行
-        if len(text) <= chars_per_line:
+        if len(text) <= max_chars_per_line:
             return text
         
-        if chars_per_line <= 0:
-            chars_per_line = max(10, len(text) // 2)  # 最小行宽，至少保证可读性
+        if max_chars_per_line <= 0:
+            max_chars_per_line = max(10, len(text) // 2)  # 最小行宽
         
-        # 智能换行：优先在标点符号处换行
+        # 对于纯英文文本，使用 textwrap（效果更好）
+        # 支持英文标点符号，包括单引号和双引号
+        if re.match(r'^[a-zA-Z0-9\s\.,!?;:()\-"\']+$', text):
+            return "\n".join(textwrap.wrap(text, width=max_chars_per_line))
+        
+        # 对于中文或中英文混合，使用智能分割
         lines = []
         current_line = ""
         
-        import re
         # 按标点符号和空格分割（保留分隔符）
-        segments = re.split(r'([，。！？；：、\s]+)', text)
+        # 支持中英文标点：，。！？；：、\s 和英文标点
+        segments = re.split(r'([，。！？；：、\s\.\,\!\?\;\:\(\)\-]+)', text)
         
         for segment in segments:
             if not segment:
@@ -168,26 +185,33 @@ class SubtitleManager:
             
             # 如果当前行加上新段落后不超过限制
             test_line = current_line + segment
-            # 保守检查：允许轻微超出（10%）
-            if len(test_line) <= chars_per_line * 1.1:
+            if len(test_line) <= max_chars_per_line:
                 current_line = test_line
             else:
                 # 需要换行
                 if current_line:
                     lines.append(current_line.strip())
+                
                 # 如果单个段落就超过限制，尝试在段落内换行
-                if len(segment) > chars_per_line:
-                    # 尝试在合适的位置分割
-                    words = re.split(r'(\s+)', segment) if re.search(r'\s', segment) else [segment]
-                    temp_line = ""
-                    for word in words:
-                        if len(temp_line + word) <= chars_per_line:
-                            temp_line += word
-                        else:
-                            if temp_line:
-                                lines.append(temp_line.strip())
-                            temp_line = word
-                    current_line = temp_line
+                if len(segment) > max_chars_per_line:
+                    # 对于长段落，尝试在合适的位置分割
+                    # 优先在空格处分割（英文单词）
+                    if re.search(r'\s', segment):
+                        words = re.split(r'(\s+)', segment)
+                        temp_line = ""
+                        for word in words:
+                            if len(temp_line + word) <= max_chars_per_line:
+                                temp_line += word
+                            else:
+                                if temp_line:
+                                    lines.append(temp_line.strip())
+                                temp_line = word
+                        current_line = temp_line
+                    else:
+                        # 对于没有空格的长段落（如长中文句子），强制分割
+                        for i in range(0, len(segment), max_chars_per_line):
+                            lines.append(segment[i:i + max_chars_per_line])
+                        current_line = ""
                 else:
                     current_line = segment
         
@@ -195,14 +219,15 @@ class SubtitleManager:
             lines.append(current_line.strip())
         
         result = "\n".join(lines) if lines else text
+        
         # 限制最大行数，避免过度换行导致字幕区域占用过大
         max_lines = 3
         if result.count('\n') >= max_lines:
-            # 如果行数过多，适当增加每行字符数
-            lines = result.split('\n')
-            if len(lines) > max_lines:
-                # 合并前几行
-                result = '\n'.join(lines[:max_lines])
+            lines_list = result.split('\n')
+            if len(lines_list) > max_lines:
+                # 如果行数过多，适当增加每行字符数并重新换行
+                adjusted_chars = int(len(text) / max_lines) + 2
+                return self._wrap_text_to_fit_width(text, max_width, font_size)
         
         return result
     
@@ -233,9 +258,9 @@ class SubtitleManager:
         # 清除旧字幕
         self.clear(fade_out=True)
         
-        # V14 增强：自动换行以适应安全区域宽度（保守策略）
-        # 字幕最大宽度 = 安全区域宽度 - 左右边距（使用更宽松的边距）
-        max_subtitle_width = SAFE_RECT["width"] - 0.6  # 左右各留 0.3 边距（更宽松）
+        # V14 增强：自动换行以适应安全区域宽度
+        # 字幕最大宽度 = 安全区域宽度 - 左右边距
+        max_subtitle_width = SAFE_RECT["width"] - 1.0  # 留出左右边距
         wrapped_text = self._wrap_text_to_fit_width(text, max_subtitle_width, font_size)
         
         # 创建字幕（使用 SimHei 字体，失败则回退）
@@ -244,12 +269,12 @@ class SubtitleManager:
         except Exception:
             subtitle = Text(wrapped_text, font_size=font_size, color=color)
         
-        # V14 增强：检查字幕宽度，只在明显超出时才缩放（保守策略）
-        # 允许轻微超出（5%），避免过度缩放影响可读性
-        if subtitle.width > max_subtitle_width * 1.05:
-            scale_factor = max_subtitle_width / subtitle.width * 0.98  # 留 2% 余量，更保守
-            # 最小缩放比例为 0.8，保证可读性
-            scale_factor = max(0.8, scale_factor)
+        # V14 增强：安全缩放逻辑（核心修复）
+        # 如果换行后依然超宽，自动缩小字号
+        if subtitle.width > max_subtitle_width:
+            scale_factor = max_subtitle_width / subtitle.width
+            # 最小缩放比例为 0.75，保证可读性
+            scale_factor = max(0.75, scale_factor)
             subtitle.scale(scale_factor)
         
         # V13 修复：使用固定Y坐标，避免遮挡
