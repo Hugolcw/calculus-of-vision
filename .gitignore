@@ -1,7 +1,7 @@
 # Manim output folders
 /media/
 /images/
-
+/Source_Code/03_Integration/media/
 /全流程代码/media/
 # Python cache
 __pycache__/
