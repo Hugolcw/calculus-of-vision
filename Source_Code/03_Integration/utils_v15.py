@@ -558,3 +558,46 @@ if "BaseThreeDScene" in globals():
     setattr(BaseThreeDScene, "add_background", _base_add_background)
     setattr(BaseThreeDScene, "add_active", _base_add_active)
 
+# =============================================================================
+# V15 核心修复：重写安全边界检查 (Hotfix for V13 Deprecation)
+# 专家注释：
+# 1. 屏蔽 utils_v13 中导致崩溃的 get_bounding_box() 调用
+# 2. 使用 Manim Community 标准的 .width / .height 属性
+# 3. 保持原有缩放逻辑，确保视觉输出与设计意图完全一致
+# =============================================================================
+
+def ensure_safe_bounds(mobject, conservative: bool = False, scale_factor: float = 0.95):
+    """
+    [V15 重写版] 确保 Mobject 在 SAFE_RECT 安全区域内。
+    修复了 AttributeError: 'Mobject' object has no attribute 'get_bounding_box'
+    """
+    # 1. 获取安全区尺寸 (从全局变量继承，含默认值兜底)
+    safe_w = SAFE_RECT["width"] if "SAFE_RECT" in globals() else 13.0
+    safe_h = SAFE_RECT["height"] if "SAFE_RECT" in globals() else 7.0
+    
+    # 保守模式：进一步收缩安全区，防止贴边
+    if conservative:
+        safe_w *= 0.9
+        safe_h *= 0.9
+        
+    # 2. 获取对象当前尺寸 (使用新版 API)
+    # 专家提示：.width 和 .height 是 Manim Community 中获取包围盒尺寸的标准属性
+    current_w = mobject.width
+    current_h = mobject.height
+    
+    # 边界情况处理：防止除零错误 (如空物体)
+    if current_w == 0 or current_h == 0:
+        return mobject
+    
+    # 3. 计算缩放比例 (保持长宽比)
+    # 只有当物体超出范围时才计算缩放因子，否则保持 1.0
+    scale_x = safe_w / current_w if current_w > safe_w else 1.0
+    scale_y = safe_h / current_h if current_h > safe_h else 1.0
+    
+    min_scale = min(scale_x, scale_y)
+    
+    # 4. 执行缩放 (仅当需要缩小时)
+    if min_scale < 1.0:
+        mobject.scale(min_scale * scale_factor)
+        
+    return mobject
