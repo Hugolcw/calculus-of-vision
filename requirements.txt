@@ -1,0 +1,4 @@
+# Core dependencies (tested window)
+manim>=0.17,<0.20
+numpy>=1.20
+

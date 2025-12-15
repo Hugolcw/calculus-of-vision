@@ -1,25 +1,29 @@
 from manim import *
 import numpy as np
 
-# 导入 V13 统一工具模块
-from utils_v13 import (
+# 工具指令（manim >=0.17,<0.20；当前验证 0.19.x）:
+# - 文本安全扫描：python tools/check_text_safety.py --root .
+# - 低质冒烟：    python tools/smoke_all.py --file sobel_v13_full.py --scene FullSobelVideo --quality pql
+# 导入无版本号的统一工具包，遵循“manim_lib”架构
+from manim_lib import (
     SubtitleManager,
     safer_text,
     make_highlight_rect,
     default_axis_config,
     apply_wave_effect,
     get_quality_config,
-    PALETTE,  # V13: 语义化色彩系统
-    SAFE_RECT,  # V13: 安全区常量
-    SUBTITLE_Y,  # V13: 字幕Y坐标
-    Z_LAYERS,  # V13: Z轴分层
-    LEFT_COL, RIGHT_COL, GUTTER,  # V13: 布局网格
-    SmartBox,  # V13: 智能组件
-    FocusArrow,  # V13: 智能组件
-    NeonLine,  # V13: 智能组件
-    BaseScene,  # V13: 基类
-    BaseThreeDScene,  # V13: 3D场景基类
-    # 向后兼容：保留旧的颜色常量（映射到PALETTE）
+    PALETTE,
+    SAFE_RECT,
+    SUBTITLE_Y,
+    Z_LAYERS,
+    LEFT_COL,
+    RIGHT_COL,
+    GUTTER,
+    SmartBox,
+    FocusArrow,
+    NeonLine,
+    BaseScene,
+    BaseThreeDScene,
     COLOR_CONTINUOUS,
     COLOR_DISCRETE,
     COLOR_DIFF,

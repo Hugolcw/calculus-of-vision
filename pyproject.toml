@@ -1,0 +1,16 @@
+[project]
+name = "calculus-of-vision"
+version = "0.1.0"
+description = "Manim-based Sobel visualization (manim_lib package + scripts)"
+authors = [{ name = "team", email = "noreply@example.com" }]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "manim>=0.17,<0.20",
+    "numpy>=1.20",
+]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+

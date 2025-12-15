@@ -1,8 +1,11 @@
 from manim import *
 import numpy as np
 
-# 导入 V13 强大的基础设施
-from utils_v13 import (
+# 工具指令（manim >=0.17,<0.20；当前验证 0.19.x）:
+# - 文本安全扫描：python tools/check_text_safety.py --root .
+# - 低质冒烟：    python tools/smoke_all.py --file sobel_v13.5.py --scene Scene0Intro --quality pql
+# 导入无版本号的统一工具包，遵循“manim_lib”架构
+from manim_lib import (
     SubtitleManager,
     safer_text,
     make_highlight_rect,
@@ -11,7 +14,8 @@ from utils_v13 import (
     PALETTE,
     SAFE_RECT,
     SUBTITLE_Y,
-    LEFT_COL, RIGHT_COL,
+    LEFT_COL,
+    RIGHT_COL,
     SmartBox,
     FocusArrow,
     NeonLine,

@@ -1,45 +1,44 @@
 from manim import *
 import numpy as np
 
-# 导入 V14 统一工具模块（继承 V13 所有功能 + V14 新增功能）
-from utils_v14 import (
-    # V13 基础功能（全部继承）
+# Tooling (manim >=0.17,<0.20; validated on 0.19.x):
+# - Text safety scan: python tools/check_text_safety.py --root .
+# - Smoke test:       python tools/smoke_all.py --file sobel_v14_full_EN.py --scene FullSobelVideo --quality pql
+# Import the versionless helper package per the new manim_lib architecture
+from manim_lib import (
     SubtitleManager,
     safer_text,
     make_highlight_rect,
     default_axis_config,
     get_quality_config,
-    PALETTE,  # V13: 语义化色彩系统
-    SAFE_RECT,  # V13: 安全区常量
-    SUBTITLE_Y,  # V13: 字幕Y坐标
-    Z_LAYERS,  # V13: Z轴分层
-    LEFT_COL, RIGHT_COL, GUTTER,  # V13: 布局网格
-    SmartBox,  # V13: 智能组件
-    FocusArrow,  # V13: 智能组件
-    NeonLine,  # V13: 智能组件
-    BaseScene,  # V13: 基类
-    BaseThreeDScene,  # V13: 3D场景基类
-    # 向后兼容：保留旧的颜色常量（映射到PALETTE）
+    PALETTE,
+    SAFE_RECT,
+    SUBTITLE_Y,
+    Z_LAYERS,
+    LEFT_COL,
+    RIGHT_COL,
+    GUTTER,
+    SmartBox,
+    FocusArrow,
+    NeonLine,
+    BaseScene,
+    BaseThreeDScene,
     COLOR_CONTINUOUS,
     COLOR_DISCRETE,
     COLOR_DIFF,
     COLOR_SMOOTH,
     BG_COLOR,
-    # V14 新增功能
-    NarrativeHelper,  # V14: 叙事工具类
-    PacingController,  # V14: 节奏控制器
-    MinimalismHelper,  # V14: 极简主义辅助工具
-    LayerManager,  # V14.5: 影院级层级管理器
-    # V14 便捷函数
-    slow_wait,  # 慢速等待
-    slow_play,  # 慢速播放
-    ask_question,  # 设问
-    show_conflict,  # 展示困境
-    show_solution,  # 展示解决
-    show_validation,  # 展示验证
+    NarrativeHelper,
+    PacingController,
+    MinimalismHelper,
+    LayerManager,
+    slow_wait,
+    slow_play,
+    ask_question,
+    show_conflict,
+    show_solution,
+    show_validation,
 )
-# V14 增强：导入安全检查函数
-from utils_v13 import ensure_safe_bounds
 
 
 # =============================================================================
