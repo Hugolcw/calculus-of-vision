@@ -29,6 +29,7 @@ from utils_v14 import (
     NarrativeHelper,  # V14: 叙事工具类
     PacingController,  # V14: 节奏控制器
     MinimalismHelper,  # V14: 极简主义辅助工具
+    LayerManager,  # V14.5: 影院级层级管理器
     # V14 便捷函数
     slow_wait,  # 慢速等待
     slow_play,  # 慢速播放
@@ -510,12 +511,16 @@ class Scene1Discrete(BaseScene):
             tips=False,
         ).shift(UP * 0.5)
         self.add_to_math_group(axes)
+        # 三明治分层：坐标轴压入背景
+        LayerManager.set_layer(axes, LayerManager.L_BG)
         
         def f(x): return 2 + np.sin(0.5 * x) + 0.5 * np.sin(x)
         # V14 极简主义：曲线作为背景元素（低饱和度）
         curve = axes.plot(f, x_range=[0, 10], color=PALETTE["MATH_FUNC"], stroke_width=4)
         curve = MinimalismHelper.create_background_element(curve, opacity=0.3)
         self.add_to_math_group(curve)
+        # 主曲线置于内容层
+        LayerManager.set_layer(curve, LayerManager.L_ACTIVE)
 
         # V14 节奏控制：慢动作展示
         slow_play(self, Create(axes), base_run_time=1.0)
@@ -632,6 +637,8 @@ class Scene1Discrete(BaseScene):
                 fill_opacity=0.12
             ).move_to(axes.c2p(k + 0.5, 2.5))
             pixel_bins.add(rect)
+        # 像素桶压到背景并降低存在感
+        LayerManager.to_background(pixel_bins, opacity=0.12)
         slow_play(self, FadeIn(pixel_bins, lag_ratio=0.1), base_run_time=1.0)
         slow_wait(self, 0.4)  # V14 节奏控制：所有等待时间使用 slow_wait
 
@@ -658,8 +665,8 @@ class Scene1Discrete(BaseScene):
         mid = len(xs_full) // 2
         idxs = [mid - 1, mid, mid + 1]
         dots_focus = VGroup(*[samples_group[0][2 * i + 1] for i in idxs])
-        # V13: 使用智能组件 SmartBox
-        box = SmartBox.create(dots_focus, content_type="dots", color=PALETTE["HIGHLIGHT"], stroke_width=3)
+        # 3b1b 风格：去框化，改用染色高亮
+        dots_focus.set_color(PALETTE["HIGHLIGHT"]).set_opacity(1.0)
         dx_line_1 = Line(
             axes.c2p(xs_full[idxs[0]], base_y - 0.3),
             axes.c2p(xs_full[idxs[2]], base_y - 0.3),
@@ -670,7 +677,7 @@ class Scene1Discrete(BaseScene):
         dx_label_1_group = VGroup(dx_label_1_bg, dx_label_1).next_to(dx_line_1, DOWN, buff=0.25, aligned_edge=ORIGIN)
 
         hud.show("最小步长是 1 个像素，我们失去了极限。", wait_after=1.2)
-        slow_play(self, Create(box), base_run_time=1.2)
+        # 去掉框，保留线与标签
         slow_play(self, Create(dx_line_1), base_run_time=1.2)
         slow_play(self, FadeIn(dx_label_1_group), base_run_time=1.2)
         # V14 节奏控制：复杂图形变化后必须等待2秒
@@ -706,7 +713,7 @@ class Scene1Discrete(BaseScene):
         ensure_safe_bounds(q_group)
         self.add_fixed_in_frame_mobjects(q_group)
 
-        cluster = VGroup(axes, curve, samples_group[0], box, dx_line_1, dx_label_1, dx_lines, dx_labels)
+        cluster = VGroup(axes, curve, samples_group[0], dx_line_1, dx_label_1, dx_lines, dx_labels)
         focus_point = axes.c2p(xs_full[mid], f(xs_full[mid]))
         self.play(
             cluster.animate.scale(2.0, about_point=focus_point).shift(ORIGIN - focus_point),
@@ -1052,23 +1059,16 @@ class Scene2Taylor(BaseScene):
         fdd_forward = right_tex.get_part_by_tex("f''(x)")
         fdd_backward = left_tex.get_part_by_tex("f''(x)")
 
-        # V14 极简主义：静态高亮框（不闪烁、不呼吸）
-        fx_rect1 = MinimalismHelper.create_static_highlight(fx_forward, color=PALETTE["MATH_FUNC"])
-        fx_rect2 = MinimalismHelper.create_static_highlight(fx_backward, color=PALETTE["MATH_FUNC"])
-        self.add_to_math_group(right_tex, left_tex, fx_rect1, fx_rect2)
-        slow_play(self, Create(fx_rect1), base_run_time=0.8)
-        slow_play(self, Create(fx_rect2), base_run_time=0.8)
-        slow_wait(self, 1.0)  # 让观众看清楚高亮的部分
-
+        # 3b1b 风格：去框化，改用染色引导
         fx_forward_copy = fx_forward.copy().set_opacity(1)
         fx_backward_copy = fx_backward.copy().set_opacity(1)
         center_pt = axes.c2p(x0, y0)
         self.add(fx_forward_copy, fx_backward_copy)
-
         self.play(
-            FadeOut(fx_rect1), FadeOut(fx_rect2),
-            fx_forward.animate.set_opacity(0.25),
-            fx_backward.animate.set_opacity(0.25),
+            right_tex.animate.set_color(GREY).set_opacity(0.35),
+            left_tex.animate.set_color(GREY).set_opacity(0.35),
+            fx_forward.animate.set_color(PALETTE["MATH_FUNC"]).set_opacity(1.0),
+            fx_backward.animate.set_color(PALETTE["MATH_FUNC"]).set_opacity(1.0),
             fx_forward_copy.animate.scale(0.5).move_to(center_pt),
             fx_backward_copy.animate.scale(0.5).move_to(center_pt),
             run_time=1.0,
@@ -1091,22 +1091,15 @@ class Scene2Taylor(BaseScene):
         # V14 节奏控制：复杂图形变化后必须等待2秒
         slow_wait(self, 2.0)
 
-        # V14 极简主义：静态高亮框（不闪烁、不呼吸）
-        fdd_rect1 = MinimalismHelper.create_static_highlight(fdd_forward, color=PALETTE["MATH_FUNC"])
-        fdd_rect2 = MinimalismHelper.create_static_highlight(fdd_backward, color=PALETTE["MATH_FUNC"])
-        self.add_to_math_group(fdd_rect1, fdd_rect2)
-        slow_play(self, Create(fdd_rect1), base_run_time=0.8)
-        slow_play(self, Create(fdd_rect2), base_run_time=0.8)
-        slow_wait(self, 1.0)  # 让观众看清楚高亮的部分
-
+        # 继续去框化：用染色突出 f''(x)
         fdd_forward_copy = fdd_forward.copy().set_opacity(1)
         fdd_backward_copy = fdd_backward.copy().set_opacity(1)
         self.add(fdd_forward_copy, fdd_backward_copy)
-
         self.play(
-            FadeOut(fdd_rect1), FadeOut(fdd_rect2),
-            fdd_forward.animate.set_opacity(0.25),
-            fdd_backward.animate.set_opacity(0.25),
+            right_tex.animate.set_color(GREY).set_opacity(0.25),
+            left_tex.animate.set_color(GREY).set_opacity(0.25),
+            fdd_forward.animate.set_color(PALETTE["MATH_FUNC"]).set_opacity(1.0),
+            fdd_backward.animate.set_color(PALETTE["MATH_FUNC"]).set_opacity(1.0),
             fdd_forward_copy.animate.scale(0.01).move_to(fdd_error_forward.get_center()),
             fdd_backward_copy.animate.scale(0.01).move_to(fdd_error_backward.get_center()),
             run_time=1.0,
@@ -1972,7 +1965,7 @@ class Scene4_6RealImage(BaseScene):
                     sq.set_fill(interpolate_color(BLACK, WHITE, vals[i, j]))
                     sq.move_to(RIGHT * (j - w / 2) * cell + UP * (h / 2 - i) * cell)
                     g.add(sq)
-            box = SurroundingRectangle(g, color=box_color, stroke_width=2)
+            box = SurroundingRectangle(g, color=box_color, stroke_width=1, stroke_opacity=0.3)
             return VGroup(box, g)
 
         raw_img = make_image(base)
@@ -2027,7 +2020,10 @@ class Scene4_6RealImage(BaseScene):
         ).arrange(RIGHT, buff=0.5)
         grid = VGroup(row1, row2).arrange(DOWN, buff=0.6).scale(0.9).move_to(ORIGIN)
 
-        self.play(FadeIn(grid, shift=UP * 0.2), run_time=1.8)
+        # 分层：网格为内容层
+        LayerManager.set_layer(grid, LayerManager.L_ACTIVE)
+        # 影院感转场：用 Wipe 而非简单淡入
+        self.play(Wipe(grid, direction=DOWN), run_time=1.8)
         slow_wait(self, 1.0)  # V14 节奏控制：所有等待时间使用 slow_wait
 
         hud.show("调阈值：过低=噪声，过高=断裂。", wait_after=1.2)

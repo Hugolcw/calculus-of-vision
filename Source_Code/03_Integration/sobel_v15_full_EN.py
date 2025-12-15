@@ -1,8 +1,8 @@
 from manim import *
 import numpy as np
 
-# 导入 V14 统一工具模块（继承 V13 所有功能 + V14 新增功能）
-from utils_v14 import (
+# 导入 V15 统一工具模块（继承 V13/V14 + V15 覆写与便捷器）
+from utils_v15 import (
     # V13 基础功能（全部继承）
     SubtitleManager,
     safer_text,
@@ -1194,6 +1194,7 @@ class Scene2_5Comparison(BaseScene):
         axes_backward = axes_forward.copy()
         axes_center = axes_forward.copy()
         axes_group = VGroup(axes_forward, axes_backward, axes_center).arrange(RIGHT, buff=0.7).to_edge(UP, buff=0.6)
+        LayerManager.set_layer(axes_group, LayerManager.L_BG)
 
         # V13: 使用语义化差分颜色（解决 #16）
         labels = VGroup(
@@ -1232,6 +1233,9 @@ class Scene2_5Comparison(BaseScene):
         backward_dots = scatter(backward_points, axes_backward, PALETTE["DIFF_BWD"])
         center_dots = scatter(center_points, axes_center, PALETTE["DIFF_CTR"])
         self.add_to_math_group(forward_dots, backward_dots, center_dots)
+        LayerManager.set_layer(forward_dots, LayerManager.L_ACTIVE)
+        LayerManager.set_layer(backward_dots, LayerManager.L_ACTIVE)
+        LayerManager.set_layer(center_dots, LayerManager.L_ACTIVE)
 
         # V14 节奏控制：慢动作展示
         self.play(
@@ -1258,6 +1262,7 @@ class Scene2_5Comparison(BaseScene):
         bars_bwd = VGroup(*[error_bar(bwd[1]) for bwd in backward_points]).arrange(RIGHT, buff=0.05)
         bars_cen = VGroup(*[error_bar(cen[1]) for cen in center_points]).arrange(RIGHT, buff=0.05)
         heatmap = VGroup(bars_fwd, bars_bwd, bars_cen).arrange(DOWN, buff=0.3).to_edge(DOWN, buff=0.9)
+        LayerManager.set_layer(heatmap, LayerManager.L_ACTIVE)
 
         heat_labels = VGroup(
             safer_text("Error Intensity (Illustration)", font_size=24, color=WHITE).next_to(heatmap, UP, buff=0.25),
@@ -1277,6 +1282,7 @@ class Scene2_5Comparison(BaseScene):
             axis_config=axes_config,
             tips=False,
         ).to_edge(DOWN, buff=0.35)
+        LayerManager.set_layer(axes_real, LayerManager.L_BG)
         # V13: 使用语义化差分颜色
         fwd_graph = axes_real.plot(lambda x: (f(x + dx) - f(x)) / dx, x_range=[1, 7], color=PALETTE["DIFF_FWD"], stroke_width=2.5, stroke_opacity=0.8)
         bwd_graph = axes_real.plot(lambda x: (f(x) - f(x - dx)) / dx, x_range=[1, 7], color=PALETTE["DIFF_BWD"], stroke_width=2.5, stroke_opacity=0.65)
@@ -1288,6 +1294,10 @@ class Scene2_5Comparison(BaseScene):
         )
         legend.arrange(RIGHT, buff=0.6).to_corner(UR, buff=0.2)
         self.add_to_math_group(axes_real, fwd_graph, bwd_graph, cen_graph, legend)
+        LayerManager.set_layer(fwd_graph, LayerManager.L_ACTIVE)
+        LayerManager.set_layer(bwd_graph, LayerManager.L_ACTIVE)
+        LayerManager.set_layer(cen_graph, LayerManager.L_ACTIVE)
+        LayerManager.set_layer(legend, LayerManager.L_LABEL)
 
         # V14 节奏控制：慢动作展示
         slow_play(self, Create(axes_real), base_run_time=1.0)
@@ -1337,6 +1347,7 @@ class Scene3SobelConstruct(BaseScene):
             axis_config=axes_config,
             tips=False,
         ).to_edge(LEFT, buff=0.8)
+        LayerManager.set_layer(axes, LayerManager.L_BG)
 
         def clean(x): return np.sin(x * 0.6)
         rng = np.random.default_rng(1)
@@ -1349,6 +1360,8 @@ class Scene3SobelConstruct(BaseScene):
         clean_graph = axes.plot(lambda x: clean(x), x_range=[0, 10], color=PALETTE["MATH_FUNC"], stroke_width=3)
         clean_graph = MinimalismHelper.create_background_element(clean_graph, opacity=0.3)
         self.add_to_math_group(axes, noisy_graph, clean_graph)
+        LayerManager.set_layer(noisy_graph, LayerManager.L_PASSIVE)
+        LayerManager.set_layer(clean_graph, LayerManager.L_PASSIVE)
 
         # V14 节奏控制：慢动作展示
         slow_play(self, Create(axes), base_run_time=0.8)
@@ -1380,12 +1393,14 @@ class Scene3SobelConstruct(BaseScene):
             axis_config=diff_axes_config,
             tips=False,
         ).to_edge(RIGHT, buff=0.8).shift(DOWN * 0.6)
+        LayerManager.set_layer(diff_axes, LayerManager.L_BG)
 
         def fake_grad(x): return 1.5 * (noisy(x + 0.1) - noisy(x - 0.1)) / 0.2
 
         # V14 极简主义：删除 apply_wave_effect，使用静态展示
         grad_graph = diff_axes.plot(lambda x: fake_grad(x), x_range=[0, 10], color=PALETTE["MATH_ERROR"], stroke_width=3.5)
         self.add_to_math_group(diff_axes, grad_graph)
+        LayerManager.set_layer(grad_graph, LayerManager.L_PASSIVE)
         
         # V14 节奏控制：慢动作展示
         slow_play(self, Create(diff_axes), base_run_time=1.2)
@@ -1438,6 +1453,7 @@ class Scene3SobelConstruct(BaseScene):
             color=PALETTE["MATH_FUNC"],
             stroke_width=3.5,
         )
+        LayerManager.set_layer(smoothed_graph, LayerManager.L_ACTIVE)
 
         window_rect = Rectangle(
             width=1.0 * axes.x_axis.unit_size,
@@ -1448,6 +1464,7 @@ class Scene3SobelConstruct(BaseScene):
             fill_opacity=0.15,
         )
         self.add_to_math_group(smoothed_graph, window_rect)
+        LayerManager.set_layer(window_rect, LayerManager.L_HIGHLIGHT)
 
         def update_window_rect(mob):
             window_center = window_tracker.get_value()
@@ -2389,28 +2406,28 @@ class Scene5Outro(BaseScene):
 # 渲染指令说明
 # =============================================================================
 """
-V13 版本渲染命令
+V15 版本渲染命令
 
 快速预览（低质量，用于调试）：
-    manim -pql sobel_v13_full.py Scene0Intro
-    manim -pql sobel_v13_full.py Scene1Discrete
-    manim -pql sobel_v13_full.py Scene1_5Limits
-    manim -pql sobel_v13_full.py Scene2Taylor
-    manim -pql sobel_v13_full.py Scene2_5Comparison
-    manim -pql sobel_v13_full.py Scene3SobelConstruct
-    manim -pql sobel_v13_full.py Scene3_5Convolution
-    manim -pql sobel_v13_full.py Scene4_2MultiScale
-    manim -pql sobel_v13_full.py Scene4Vision
-    manim -pql sobel_v13_full.py Scene4_6RealImage
-    manim -pql sobel_v13_full.py Scene4_5Applications
-    manim -pql sobel_v13_full.py Scene5Outro
+    manim -pql sobel_v15_full_EN.py Scene0Intro
+    manim -pql sobel_v15_full_EN.py Scene1Discrete
+    manim -pql sobel_v15_full_EN.py Scene1_5Limits
+    manim -pql sobel_v15_full_EN.py Scene2Taylor
+    manim -pql sobel_v15_full_EN.py Scene2_5Comparison
+    manim -pql sobel_v15_full_EN.py Scene3SobelConstruct
+    manim -pql sobel_v15_full_EN.py Scene3_5Convolution
+    manim -pql sobel_v15_full_EN.py Scene4_2MultiScale
+    manim -pql sobel_v15_full_EN.py Scene4Vision
+    manim -pql sobel_v15_full_EN.py Scene4_6RealImage
+    manim -pql sobel_v15_full_EN.py Scene4_5Applications
+    manim -pql sobel_v15_full_EN.py Scene5Outro
 
 完整视频（低质量预览）：
-    manim -pql sobel_v13_full.py FullSobelVideo
+    manim -pql sobel_v15_full_EN.py FullSobelVideo
 
 高质量渲染（最终输出）：
-    manim -pqh sobel_v13_full.py Scene0Intro
-    manim -pqh sobel_v13_full.py FullSobelVideo
+    manim -pqh sobel_v15_full_EN.py Scene0Intro
+    manim -pqh sobel_v15_full_EN.py FullSobelVideo
 
 参数说明：
     -p : 渲染后自动预览

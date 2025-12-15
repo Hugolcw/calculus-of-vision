@@ -1,11 +1,10 @@
 """
-V14 统一工具模块
-基于 V13，新增：
-- 叙事工具类（NarrativeHelper）
-- 节奏控制器（PacingController）
-- 极简主义辅助工具（MinimalismHelper）
+V15 统一工具模块
+基于 V14，新增/覆写：
+- 默认坐标轴弱化 (default_axis_config stroke_opacity=0.3，仅 v15)
+- 层级添加便捷器 add_background / add_active（仅在 v15 注入 BaseScene）
 
-V14 核心理念：
+沿用 V14 核心理念：
 - 叙事优先：建立"提出问题-受挫-解决"的完整叙事链
 - 节奏控制：实现 3B1B 风格的"呼吸法则"
 - 极简主义：删除装饰性动画，降低饱和度
@@ -14,6 +13,24 @@ V14 核心理念：
 from utils_v13 import *
 import textwrap
 import re
+
+# =============================================================================
+# V15 覆写：默认坐标轴配置更弱化（不影响 v14）
+# =============================================================================
+def default_axis_config(
+    stroke_opacity: float = 0.3,
+    stroke_width: float = 1.0,
+    stroke_color: str = GREY_C,
+) -> dict:
+    """
+    影院风格的坐标轴默认配置：轻量背景线条，减弱平面感。
+    仅在 v15 生效；v14 仍使用原始默认值，保持版本隔离。
+    """
+    return {
+        "stroke_opacity": stroke_opacity,
+        "stroke_width": stroke_width,
+        "stroke_color": stroke_color,
+    }
 
 # =============================================================================
 # V14 Pro：影院级智能字幕管理器（覆盖 utils_v13 中的版本）
@@ -510,4 +527,34 @@ class LayerManager:
         for t in target_mobjects:
             LayerManager.to_foreground(t)
 
+
+# =============================================================================
+# V15 增强：BaseScene 便捷添加器（锁层级 + 透明度），保证层级不被动画覆盖
+# =============================================================================
+def _base_add_background(self, mobject: Mobject, opacity: float = 0.2):
+    """
+    将元素添加为背景：统一弱化并下沉层级，防止 FadeIn/Create 覆盖层级设置。
+    """
+    LayerManager.to_background(mobject, opacity=opacity)
+    self.add(mobject)
+    return mobject
+
+
+def _base_add_active(self, mobject: Mobject, layer: int = LayerManager.L_ACTIVE):
+    """
+    将元素添加为主动内容：锁定层级并保持不透明，避免动画重置 z_index。
+    """
+    LayerManager.set_layer(mobject, layer)
+    mobject.set_opacity(1.0)
+    self.add(mobject)
+    return mobject
+
+
+# 仅在 v15 挂载，保持 v14 隔离
+if "BaseScene" in globals():
+    setattr(BaseScene, "add_background", _base_add_background)
+    setattr(BaseScene, "add_active", _base_add_active)
+if "BaseThreeDScene" in globals():
+    setattr(BaseThreeDScene, "add_background", _base_add_background)
+    setattr(BaseThreeDScene, "add_active", _base_add_active)
 
