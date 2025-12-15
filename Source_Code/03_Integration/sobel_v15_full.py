@@ -37,9 +37,9 @@ from utils_v15 import (
     show_conflict,  # 展示困境
     show_solution,  # 展示解决
     show_validation,  # 展示验证
+    # V15 统一导出安全布局工具
+    ensure_safe_bounds,
 )
-# V14 增强：导入安全检查函数
-from utils_v13 import ensure_safe_bounds
 
 
 # =============================================================================

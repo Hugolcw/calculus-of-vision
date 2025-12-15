@@ -69,6 +69,98 @@ SUBTITLE_CORNER_RADIUS = 0.06
 # 透明度配置
 OPACITY_GHOST = 0.2
 
+
+# =============================================================================
+# 安全布局辅助函数：ensure_safe_bounds
+# =============================================================================
+def ensure_safe_bounds(
+    mobject: Mobject,
+    max_width: Optional[float] = None,
+    max_height: Optional[float] = None,
+    scale_factor: float = 0.95,
+    tolerance_ratio: float = 0.05,
+    conservative: bool = False,
+) -> Mobject:
+    """
+    V13+ 公共工具：确保物体整体落在 SAFE_RECT 安全区内，避免出屏和压到字幕。
+
+    设计原则：
+    - 先按宽高等比缩放，再做平移修正；
+    - 默认略收缩 (scale_factor<1)，给字幕和边缘留出“呼吸空间”；
+    - conservative=True 时只做轻度修正，避免镜头中物体跳动过大。
+    """
+    if mobject is None:
+        return mobject
+
+    # 1) 计算目标宽高
+    safe_w = SAFE_RECT["width"]
+    safe_h = SAFE_RECT["height"]
+    if max_width is None:
+        max_width = safe_w * scale_factor
+    if max_height is None:
+        max_height = safe_h * scale_factor
+
+    # 2) 尺寸缩放（等比）
+    width = mobject.width
+    height = mobject.height
+    need_scale = False
+    scale = 1.0
+
+    if width > max_width:
+        need_scale = True
+        scale = min(scale, max_width / max(width, 1e-6))
+    if height > max_height:
+        need_scale = True
+        scale = min(scale, max_height / max(height, 1e-6))
+
+    if need_scale:
+        # 保守模式：限制最大缩放量，避免字号突变
+        if conservative:
+            scale = max(scale, 0.85)
+        mobject.scale(scale)
+
+    # 3) 位置修正：把包围盒推回安全区内
+    #    安全区中心在 ORIGIN，宽 safe_w，高 safe_h
+    half_w = safe_w / 2
+    half_h = safe_h / 2
+    tol_w = half_w * tolerance_ratio
+    tol_h = half_h * tolerance_ratio
+
+    left, right = -half_w + tol_w, half_w - tol_w
+    bottom, top = -half_h + tol_h, half_h - tol_h
+
+    # 字幕禁飞区：略高于 SUBTITLE_Y，避免字幕与主体严重重叠
+    subtitle_forbidden = SUBTITLE_Y + 0.4
+
+    bbox = mobject.get_bounding_box()
+    (x_min, y_min, _), (x_max, y_max, _) = bbox[0], bbox[2]
+    dx = 0.0
+    dy = 0.0
+
+    if x_min < left:
+        dx = left - x_min
+    elif x_max > right:
+        dx = right - x_max
+
+    if y_min < bottom:
+        dy = bottom - y_min
+    elif y_max > top:
+        dy = top - y_max
+
+    # 额外：若主体压到字幕禁飞区，则整体上抬
+    if y_min < subtitle_forbidden:
+        dy = max(dy, subtitle_forbidden - y_min)
+
+    if conservative:
+        # 保守模式：只做轻微位置修正，避免明显“跳帧”
+        dx *= 0.6
+        dy *= 0.6
+
+    if abs(dx) > 1e-6 or abs(dy) > 1e-6:
+        mobject.shift(np.array([dx, dy, 0.0]))
+
+    return mobject
+
 # 质量预设
 Quality = Literal["low", "med", "high"]
 QUALITY_CONFIG = {
